@@ -1,11 +1,12 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ShoppingCart, Eye } from 'lucide-react';
+import { ShoppingCart, Eye, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/contexts/CartContext';
+import { toast } from 'sonner';
 
 interface Product {
   id: string;
@@ -28,6 +29,7 @@ interface ProductCardProps {
 const ProductCard: React.FC<ProductCardProps> = ({ product, index }) => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const [isWishlisted, setIsWishlisted] = useState(false);
 
   const getTagColor = (tag: string) => {
     switch (tag) {
@@ -46,7 +48,19 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index }) => {
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    await addToCart(product.id);
+    try {
+      await addToCart(product.id);
+      toast.success('Added to cart!');
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast.error('Failed to add to cart');
+    }
+  };
+
+  const handleWishlist = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsWishlisted(!isWishlisted);
+    toast.success(isWishlisted ? 'Removed from wishlist' : 'Added to wishlist');
   };
 
   return (
@@ -73,6 +87,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index }) => {
                 {product.promo_tag}
               </Badge>
             )}
+          </div>
+          <div className="absolute top-2 left-2">
+            <Button
+              size="icon"
+              variant="ghost"
+              className={`bg-white/80 hover:bg-white ${isWishlisted ? 'text-red-500' : 'text-gray-600'}`}
+              onClick={handleWishlist}
+            >
+              <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-current' : ''}`} />
+            </Button>
           </div>
           {!product.in_stock && (
             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">

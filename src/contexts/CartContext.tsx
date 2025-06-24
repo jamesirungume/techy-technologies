@@ -41,11 +41,53 @@ export const useCart = () => {
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [localCart, setLocalCart] = useState<{ [key: string]: number }>({});
   const { user } = useAuth();
+
+  // Load cart from localStorage on mount
+  useEffect(() => {
+    const savedCart = localStorage.getItem('techy-cart');
+    if (savedCart) {
+      setLocalCart(JSON.parse(savedCart));
+    }
+  }, []);
+
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('techy-cart', JSON.stringify(localCart));
+  }, [localCart]);
 
   const fetchCartItems = async () => {
     if (!user) {
-      setItems([]);
+      // Convert local cart to items format
+      const productIds = Object.keys(localCart);
+      if (productIds.length === 0) {
+        setItems([]);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const { data: products, error } = await supabase
+          .from('products')
+          .select('id, name, price, image_url, stock_quantity')
+          .in('id', productIds);
+
+        if (error) throw error;
+
+        const cartItems: CartItem[] = products?.map(product => ({
+          id: `local-${product.id}`,
+          product_id: product.id,
+          quantity: localCart[product.id] || 1,
+          product: product
+        })) || [];
+
+        setItems(cartItems);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
@@ -79,11 +121,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     fetchCartItems();
-  }, [user]);
+  }, [user, localCart]);
 
   const addToCart = async (productId: string, quantity = 1) => {
     if (!user) {
-      toast.error('Please sign in to add items to cart');
+      // Add to local cart
+      setLocalCart(prev => ({
+        ...prev,
+        [productId]: (prev[productId] || 0) + quantity
+      }));
       return;
     }
 
@@ -103,7 +149,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) throw error;
       await fetchCartItems();
-      toast.success('Added to cart!');
     } catch (error) {
       console.error('Error adding to cart:', error);
       toast.error('Failed to add to cart');
@@ -111,7 +156,19 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateQuantity = async (productId: string, quantity: number) => {
-    if (!user) return;
+    if (!user) {
+      if (quantity <= 0) {
+        const newCart = { ...localCart };
+        delete newCart[productId];
+        setLocalCart(newCart);
+      } else {
+        setLocalCart(prev => ({
+          ...prev,
+          [productId]: quantity
+        }));
+      }
+      return;
+    }
 
     try {
       if (quantity <= 0) {
@@ -134,7 +191,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const removeFromCart = async (productId: string) => {
-    if (!user) return;
+    if (!user) {
+      const newCart = { ...localCart };
+      delete newCart[productId];
+      setLocalCart(newCart);
+      return;
+    }
 
     try {
       const { error } = await supabase
@@ -153,7 +215,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const clearCart = async () => {
-    if (!user) return;
+    if (!user) {
+      setLocalCart({});
+      return;
+    }
 
     try {
       const { error } = await supabase

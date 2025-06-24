@@ -1,9 +1,11 @@
 
 import React from 'react';
-import { BrowserRouter } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
+import PromotionalBanners from '../components/PromotionalBanners';
+import TrustBadges from '../components/TrustBadges';
 import PopularDevices from '../components/PopularDevices';
+import PhonesSection from '../components/PhonesSection';
 import CategoryShowcase from '../components/CategoryShowcase';
 import FeaturedProducts from '../components/FeaturedProducts';
 import Footer from '../components/Footer';
@@ -13,8 +15,11 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <Hero />
+      <PromotionalBanners />
+      <TrustBadges />
       <PopularDevices />
-      <CategoryShowcase />
+      <PhonesSection />
+      <CategoryShowcase />  
       <FeaturedProducts />
       <Footer />
     </div>

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Search, ShoppingCart, Menu, X } from 'lucide-react';
+import { Search, ShoppingCart, Menu, X, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +33,7 @@ const Navbar = () => {
   return (
     <nav className="bg-white shadow-lg sticky top-0 z-50">
       <div className="container mx-auto px-4">
+        {/* First Row - Main Navigation */}
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div 
@@ -63,72 +64,47 @@ const Navbar = () => {
             </div>
           </form>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-6">
+          {/* Desktop Actions */}
+          <div className="hidden md:flex items-center space-x-4">
             <Button
               variant="ghost"
-              onClick={() => navigate('/products')}
+              className="relative"
+              onClick={() => navigate('/wishlist')}
             >
-              Products
+              <Heart className="h-5 w-5" />
             </Button>
+            
             <Button
               variant="ghost"
-              onClick={() => navigate('/products?category=Phones')}
+              className="relative"
+              onClick={() => navigate('/cart')}
             >
-              Phones
+              <ShoppingCart className="h-5 w-5" />
+              {cartItemCount > 0 && (
+                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                  {cartItemCount}
+                </Badge>
+              )}
             </Button>
+            
             <Button
               variant="ghost"
-              onClick={() => navigate('/products?category=Laptops')}
+              onClick={() => navigate('/auth')}
             >
-              Laptops
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => navigate('/products?category=PCs')}
-            >
-              PCs
+              Seller?
             </Button>
             
             {user ? (
-              <div className="flex items-center space-x-4">
-                <Button
-                  variant="ghost"
-                  className="relative"
-                  onClick={() => navigate('/cart')}
-                >
-                  <ShoppingCart className="h-5 w-5" />
-                  {cartItemCount > 0 && (
-                    <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
-                      {cartItemCount}
-                    </Badge>
-                  )}
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => navigate('/auth')}
-                >
-                  Seller?
-                </Button>
-                <Button variant="outline" onClick={handleSignOut}>
-                  Sign Out
-                </Button>
-              </div>
+              <Button variant="outline" onClick={handleSignOut}>
+                Sign Out
+              </Button>
             ) : (
-              <div className="flex items-center space-x-4">
-                <Button
-                  variant="ghost"
-                  onClick={() => navigate('/auth')}
-                >
-                  Seller?
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => navigate('/auth')}
-                >
-                  Sign In
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                onClick={() => navigate('/auth')}
+              >
+                Sign In
+              </Button>
             )}
           </div>
 
@@ -140,6 +116,40 @@ const Navbar = () => {
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </Button>
+        </div>
+
+        {/* Second Row - Category Navigation */}
+        <div className="hidden md:flex items-center justify-center space-x-6 py-3 border-t">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/products')}
+          >
+            All Products
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/products?category=Phones')}
+          >
+            Phones
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/products?category=Laptops')}
+          >
+            Laptops
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/products?category=PCs')}
+          >
+            PCs
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/products?category=Accessories')}
+          >
+            Accessories
           </Button>
         </div>
 
@@ -172,7 +182,7 @@ const Navbar = () => {
                 className="justify-start"
                 onClick={() => {navigate('/products'); setIsMenuOpen(false);}}
               >
-                Products
+                All Products
               </Button>
               <Button
                 variant="ghost"
@@ -195,49 +205,56 @@ const Navbar = () => {
               >
                 PCs
               </Button>
+              <Button
+                variant="ghost"
+                className="justify-start"
+                onClick={() => {navigate('/products?category=Accessories'); setIsMenuOpen(false);}}
+              >
+                Accessories
+              </Button>
+              
+              <Button
+                variant="ghost"
+                className="justify-start relative"
+                onClick={() => {navigate('/wishlist'); setIsMenuOpen(false);}}
+              >
+                <Heart className="h-5 w-5 mr-2" />
+                Wishlist
+              </Button>
+              
+              <Button
+                variant="ghost"
+                className="justify-start relative"
+                onClick={() => {navigate('/cart'); setIsMenuOpen(false);}}
+              >
+                <ShoppingCart className="h-5 w-5 mr-2" />
+                Cart {cartItemCount > 0 && `(${cartItemCount})`}
+              </Button>
+              
+              <Button
+                variant="ghost"
+                className="justify-start"
+                onClick={() => {navigate('/auth'); setIsMenuOpen(false);}}
+              >
+                Seller?
+              </Button>
               
               {user ? (
-                <>
-                  <Button
-                    variant="ghost"
-                    className="justify-start relative"
-                    onClick={() => {navigate('/cart'); setIsMenuOpen(false);}}
-                  >
-                    <ShoppingCart className="h-5 w-5 mr-2" />
-                    Cart {cartItemCount > 0 && `(${cartItemCount})`}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="justify-start"
-                    onClick={() => {navigate('/auth'); setIsMenuOpen(false);}}
-                  >
-                    Seller?
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="justify-start"
-                    onClick={() => {handleSignOut(); setIsMenuOpen(false);}}
-                  >
-                    Sign Out
-                  </Button>
-                </>
+                <Button 
+                  variant="outline" 
+                  className="justify-start"
+                  onClick={() => {handleSignOut(); setIsMenuOpen(false);}}
+                >
+                  Sign Out
+                </Button>
               ) : (
-                <>
-                  <Button
-                    variant="ghost"
-                    className="justify-start"
-                    onClick={() => {navigate('/auth'); setIsMenuOpen(false);}}
-                  >
-                    Seller?
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="justify-start"
-                    onClick={() => {navigate('/auth'); setIsMenuOpen(false);}}
-                  >
-                    Sign In
-                  </Button>
-                </>
+                <Button
+                  variant="outline"
+                  className="justify-start"
+                  onClick={() => {navigate('/auth'); setIsMenuOpen(false);}}
+                >
+                  Sign In
+                </Button>
               )}
             </div>
           </div>

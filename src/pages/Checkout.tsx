@@ -26,11 +26,6 @@ const Checkout = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  if (!user) {
-    navigate('/auth');
-    return null;
-  }
-
   if (items.length === 0) {
     navigate('/cart');
     return null;
@@ -52,7 +47,7 @@ const Checkout = () => {
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       await clearCart();
-      toast.success('Order placed successfully!');
+      toast.success('Order placed successfully! You will receive a confirmation email shortly.');
       navigate('/');
     } catch (error) {
       toast.error('Failed to place order. Please try again.');
@@ -67,6 +62,17 @@ const Checkout = () => {
       
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8">Checkout</h1>
+        
+        {!user && (
+          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-yellow-800">
+              <strong>Want to track your order?</strong> Sign in to save your order history and get updates.
+              <Button variant="link" onClick={() => navigate('/auth')} className="ml-2">
+                Sign In
+              </Button>
+            </p>
+          </div>
+        )}
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <Card>

@@ -3,13 +3,27 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ShoppingCart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getProducts } from '../utils/productData';
+import { useCart } from '@/contexts/CartContext';
+import { toast } from 'sonner';
 
 const FeaturedProducts = () => {
   const navigate = useNavigate();
+  const { addToCart } = useCart();
   const products = getProducts();
-  const featuredProducts = products.filter(p => p.tag === 'Featured').slice(0, 4);
+  const featuredProducts = products.filter(p => p.main_tag === 'Featured').slice(0, 4);
+
+  const handleAddToCart = async (productId: string) => {
+    try {
+      await addToCart(productId);
+      toast.success('Added to cart!');
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast.error('Failed to add to cart');
+    }
+  };
 
   return (
     <section className="py-16 bg-gradient-to-r from-gray-900 to-gray-800 text-white">
@@ -30,12 +44,12 @@ const FeaturedProducts = () => {
               <CardContent className="p-0">
                 <div className="relative overflow-hidden">
                   <img
-                    src={product.image}
+                    src={product.image_url}
                     alt={product.name}
                     className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
                   />
                   <Badge className="absolute top-2 right-2 bg-yellow-500 text-black hover:bg-yellow-600">
-                    {product.tag}
+                    {product.main_tag}
                   </Badge>
                 </div>
                 <div className="p-6">
@@ -45,9 +59,30 @@ const FeaturedProducts = () => {
                   <p className="text-gray-300 mb-3 text-sm">{product.description}</p>
                   <div className="flex items-center justify-between">
                     <span className="text-2xl font-bold text-yellow-400">${product.price}</span>
-                    <Button size="sm" variant="outline" className="text-white border-white hover:bg-white hover:text-black">
-                      View Details
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="text-white border-white bg-transparent hover:bg-white hover:text-black"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/product/${product.id}`);
+                        }}
+                      >
+                        View Details
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-yellow-500 text-black hover:bg-yellow-600"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddToCart(product.id);
+                        }}
+                      >
+                        <ShoppingCart className="h-4 w-4 mr-1" />
+                        Add to Cart
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -59,10 +94,10 @@ const FeaturedProducts = () => {
           <Button
             size="lg"
             variant="outline"
-            className="text-white border-white hover:bg-white hover:text-black"
+            className="text-white border-white bg-transparent hover:bg-white hover:text-black"
             onClick={() => navigate('/products?tag=Featured')}
           >
-            View All Featured
+            View All Featured Products
           </Button>
         </div>
       </div>
