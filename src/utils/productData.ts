@@ -110,3 +110,35 @@ export const getProducts = (): Product[] => {
     }
   ];
 };
+
+export const getProductById = (id: string): Product | null => {
+  const products = getProducts();
+  return products.find(product => product.id === id) || null;
+};
+
+let products = getProducts();
+
+export const addProduct = (productData: Omit<Product, 'id'>): Product => {
+  const newProduct: Product = {
+    ...productData,
+    id: Math.random().toString(36).substr(2, 9)
+  };
+  products.push(newProduct);
+  return newProduct;
+};
+
+export const updateProduct = (id: string, productData: Partial<Omit<Product, 'id'>>): Product | null => {
+  const index = products.findIndex(p => p.id === id);
+  if (index === -1) return null;
+  
+  products[index] = { ...products[index], ...productData };
+  return products[index];
+};
+
+export const deleteProduct = (id: string): boolean => {
+  const index = products.findIndex(p => p.id === id);
+  if (index === -1) return false;
+  
+  products.splice(index, 1);
+  return true;
+};

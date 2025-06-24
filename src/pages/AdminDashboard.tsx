@@ -20,10 +20,12 @@ const AdminDashboard = () => {
     name: '',
     description: '',
     price: '',
-    image: '',
+    image_url: '',
     category: '' as Product['category'] | '',
-    tag: '' as Product['tag'] | '',
-    inStock: true
+    main_tag: '' as Product['main_tag'] | '',
+    promo_tag: '',
+    in_stock: true,
+    stock_quantity: ''
   });
 
   const refreshProducts = () => {
@@ -33,7 +35,7 @@ const AdminDashboard = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.description || !formData.price || !formData.category || !formData.tag) {
+    if (!formData.name || !formData.description || !formData.price || !formData.category) {
       alert('Please fill in all required fields');
       return;
     }
@@ -42,10 +44,12 @@ const AdminDashboard = () => {
       name: formData.name,
       description: formData.description,
       price: parseFloat(formData.price),
-      image: formData.image || 'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=500&h=400&fit=crop',
+      image_url: formData.image_url || 'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=500&h=400&fit=crop',
       category: formData.category as Product['category'],
-      tag: formData.tag as Product['tag'],
-      inStock: formData.inStock
+      main_tag: formData.main_tag as Product['main_tag'],
+      promo_tag: formData.promo_tag,
+      in_stock: formData.in_stock,
+      stock_quantity: parseInt(formData.stock_quantity) || 0
     };
 
     if (editingProduct) {
@@ -64,10 +68,12 @@ const AdminDashboard = () => {
       name: product.name,
       description: product.description,
       price: product.price.toString(),
-      image: product.image,
+      image_url: product.image_url,
       category: product.category,
-      tag: product.tag,
-      inStock: product.inStock
+      main_tag: product.main_tag || '',
+      promo_tag: product.promo_tag || '',
+      in_stock: product.in_stock,
+      stock_quantity: product.stock_quantity.toString()
     });
     setIsDialogOpen(true);
   };
@@ -84,10 +90,12 @@ const AdminDashboard = () => {
       name: '',
       description: '',
       price: '',
-      image: '',
+      image_url: '',
       category: '',
-      tag: '',
-      inStock: true
+      main_tag: '',
+      promo_tag: '',
+      in_stock: true,
+      stock_quantity: ''
     });
     setEditingProduct(null);
     setIsDialogOpen(false);
@@ -171,12 +179,12 @@ const AdminDashboard = () => {
                 </div>
                 
                 <div>
-                  <Label htmlFor="image">Image URL</Label>
+                  <Label htmlFor="image_url">Image URL</Label>
                   <Input
-                    id="image"
+                    id="image_url"
                     type="url"
-                    value={formData.image}
-                    onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                    value={formData.image_url}
+                    onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
                     placeholder="https://example.com/image.jpg"
                   />
                 </div>
@@ -200,13 +208,13 @@ const AdminDashboard = () => {
                 </div>
                 
                 <div>
-                  <Label htmlFor="tag">Tag *</Label>
+                  <Label htmlFor="main_tag">Main Tag</Label>
                   <Select
-                    value={formData.tag}
-                    onValueChange={(value) => setFormData({ ...formData, tag: value as Product['tag'] })}
+                    value={formData.main_tag}
+                    onValueChange={(value) => setFormData({ ...formData, main_tag: value as Product['main_tag'] })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select tag" />
+                      <SelectValue placeholder="Select main tag" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="New">New</SelectItem>
@@ -216,15 +224,37 @@ const AdminDashboard = () => {
                     </SelectContent>
                   </Select>
                 </div>
+
+                <div>
+                  <Label htmlFor="promo_tag">Promo Tag (Optional)</Label>
+                  <Input
+                    id="promo_tag"
+                    value={formData.promo_tag}
+                    onChange={(e) => setFormData({ ...formData, promo_tag: e.target.value })}
+                    placeholder="e.g., 50% OFF, Limited Time"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="stock_quantity">Stock Quantity *</Label>
+                  <Input
+                    id="stock_quantity"
+                    type="number"
+                    min="0"
+                    value={formData.stock_quantity}
+                    onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
+                    required
+                  />
+                </div>
                 
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"
-                    id="inStock"
-                    checked={formData.inStock}
-                    onChange={(e) => setFormData({ ...formData, inStock: e.target.checked })}
+                    id="in_stock"
+                    checked={formData.in_stock}
+                    onChange={(e) => setFormData({ ...formData, in_stock: e.target.checked })}
                   />
-                  <Label htmlFor="inStock">In Stock</Label>
+                  <Label htmlFor="in_stock">In Stock</Label>
                 </div>
                 
                 <div className="flex space-x-2">
@@ -246,21 +276,23 @@ const AdminDashboard = () => {
               <CardContent className="p-0">
                 <div className="relative">
                   <img
-                    src={product.image}
+                    src={product.image_url}
                     alt={product.name}
                     className="w-full h-48 object-cover"
                   />
-                  <Badge className={`absolute top-2 right-2 ${getTagColor(product.tag)}`}>
-                    {product.tag}
-                  </Badge>
+                  {product.main_tag && (
+                    <Badge className={`absolute top-2 right-2 ${getTagColor(product.main_tag)}`}>
+                      {product.main_tag}
+                    </Badge>
+                  )}
                 </div>
                 <div className="p-4">
                   <div className="flex justify-between items-start mb-2">
                     <Badge variant="outline" className="text-xs">
                       {product.category}
                     </Badge>
-                    <Badge variant={product.inStock ? "outline" : "destructive"} className="text-xs">
-                      {product.inStock ? "In Stock" : "Out of Stock"}
+                    <Badge variant={product.in_stock ? "outline" : "destructive"} className="text-xs">
+                      {product.in_stock ? "In Stock" : "Out of Stock"}
                     </Badge>
                   </div>
                   <h3 className="font-semibold text-lg mb-1">{product.name}</h3>
