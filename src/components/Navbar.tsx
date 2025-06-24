@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
+import TechyLogo from './TechyLogo';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -28,6 +29,14 @@ const Navbar = () => {
     navigate('/');
   };
 
+  const handleProtectedRoute = (route: string) => {
+    if (!user && (route === '/cart' || route === '/wishlist' || route === '/checkout')) {
+      navigate('/auth');
+      return;
+    }
+    navigate(route);
+  };
+
   const cartItemCount = getTotalItems();
 
   return (
@@ -37,10 +46,10 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div 
-            className="text-2xl font-bold text-primary cursor-pointer"
+            className="cursor-pointer"
             onClick={() => navigate('/')}
           >
-            Techy
+            <TechyLogo />
           </div>
 
           {/* Desktop Search */}
@@ -69,7 +78,7 @@ const Navbar = () => {
             <Button
               variant="ghost"
               className="relative"
-              onClick={() => navigate('/wishlist')}
+              onClick={() => handleProtectedRoute('/wishlist')}
             >
               <Heart className="h-5 w-5" />
             </Button>
@@ -77,7 +86,7 @@ const Navbar = () => {
             <Button
               variant="ghost"
               className="relative"
-              onClick={() => navigate('/cart')}
+              onClick={() => handleProtectedRoute('/cart')}
             >
               <ShoppingCart className="h-5 w-5" />
               {cartItemCount > 0 && (
@@ -89,7 +98,7 @@ const Navbar = () => {
             
             <Button
               variant="ghost"
-              onClick={() => navigate('/auth')}
+              onClick={() => navigate('/admin')}
             >
               Seller?
             </Button>
@@ -216,7 +225,7 @@ const Navbar = () => {
               <Button
                 variant="ghost"
                 className="justify-start relative"
-                onClick={() => {navigate('/wishlist'); setIsMenuOpen(false);}}
+                onClick={() => {handleProtectedRoute('/wishlist'); setIsMenuOpen(false);}}
               >
                 <Heart className="h-5 w-5 mr-2" />
                 Wishlist
@@ -225,7 +234,7 @@ const Navbar = () => {
               <Button
                 variant="ghost"
                 className="justify-start relative"
-                onClick={() => {navigate('/cart'); setIsMenuOpen(false);}}
+                onClick={() => {handleProtectedRoute('/cart'); setIsMenuOpen(false);}}
               >
                 <ShoppingCart className="h-5 w-5 mr-2" />
                 Cart {cartItemCount > 0 && `(${cartItemCount})`}
@@ -234,7 +243,7 @@ const Navbar = () => {
               <Button
                 variant="ghost"
                 className="justify-start"
-                onClick={() => {navigate('/auth'); setIsMenuOpen(false);}}
+                onClick={() => {navigate('/admin'); setIsMenuOpen(false);}}
               >
                 Seller?
               </Button>

@@ -1,6 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Package } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Button } from '@/components/ui/button';
@@ -8,14 +9,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { getProducts, addProduct, updateProduct, deleteProduct, Product } from '../utils/productData';
+import { useAuth } from '@/contexts/AuthContext';
 
 const AdminDashboard = () => {
   const [products, setProducts] = useState<Product[]>(getProducts());
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -27,6 +33,17 @@ const AdminDashboard = () => {
     in_stock: true,
     stock_quantity: ''
   });
+
+  // Redirect to auth if not logged in
+  useEffect(() => {
+    if (!user) {
+      navigate('/auth');
+    }
+  }, [user, navigate]);
+
+  if (!user) {
+    return null;
+  }
 
   const refreshProducts = () => {
     setProducts(getProducts());
@@ -138,7 +155,7 @@ const AdminDashboard = () => {
               </Button>
             </DialogTrigger>
             
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
                   {editingProduct ? 'Edit Product' : 'Add New Product'}
@@ -146,35 +163,38 @@ const AdminDashboard = () => {
               </DialogHeader>
               
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <Label htmlFor="name">Product Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="name">Product Name *</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="price">Price ($) *</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      step="0.01"
+                      value={formData.price}
+                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                      required
+                    />
+                  </div>
                 </div>
                 
                 <div>
                   <Label htmlFor="description">Description *</Label>
-                  <Input
+                  <Textarea
                     id="description"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     required
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="price">Price ($) *</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    step="0.01"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    required
+                    rows={3}
                   />
                 </div>
                 
@@ -189,62 +209,66 @@ const AdminDashboard = () => {
                   />
                 </div>
                 
-                <div>
-                  <Label htmlFor="category">Category *</Label>
-                  <Select
-                    value={formData.category}
-                    onValueChange={(value) => setFormData({ ...formData, category: value as Product['category'] })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Phones">Phones</SelectItem>
-                      <SelectItem value="PCs">PCs</SelectItem>
-                      <SelectItem value="Laptops">Laptops</SelectItem>
-                      <SelectItem value="Accessories">Accessories</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="main_tag">Main Tag</Label>
-                  <Select
-                    value={formData.main_tag}
-                    onValueChange={(value) => setFormData({ ...formData, main_tag: value as Product['main_tag'] })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select main tag" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="New">New</SelectItem>
-                      <SelectItem value="Featured">Featured</SelectItem>
-                      <SelectItem value="Hot">Hot</SelectItem>
-                      <SelectItem value="Top Pick">Top Pick</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="promo_tag">Promo Tag (Optional)</Label>
-                  <Input
-                    id="promo_tag"
-                    value={formData.promo_tag}
-                    onChange={(e) => setFormData({ ...formData, promo_tag: e.target.value })}
-                    placeholder="e.g., 50% OFF, Limited Time"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="category">Category *</Label>
+                    <Select
+                      value={formData.category}
+                      onValueChange={(value) => setFormData({ ...formData, category: value as Product['category'] })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Phones">Phones</SelectItem>
+                        <SelectItem value="PCs">PCs</SelectItem>
+                        <SelectItem value="Laptops">Laptops</SelectItem>
+                        <SelectItem value="Accessories">Accessories</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="main_tag">Main Tag</Label>
+                    <Select
+                      value={formData.main_tag}
+                      onValueChange={(value) => setFormData({ ...formData, main_tag: value as Product['main_tag'] })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select main tag" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="New">New</SelectItem>
+                        <SelectItem value="Featured">Featured</SelectItem>
+                        <SelectItem value="Hot">Hot</SelectItem>
+                        <SelectItem value="Top Pick">Top Pick</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
-                <div>
-                  <Label htmlFor="stock_quantity">Stock Quantity *</Label>
-                  <Input
-                    id="stock_quantity"
-                    type="number"
-                    min="0"
-                    value={formData.stock_quantity}
-                    onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
-                    required
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="promo_tag">Promo Tag (Optional)</Label>
+                    <Input
+                      id="promo_tag"
+                      value={formData.promo_tag}
+                      onChange={(e) => setFormData({ ...formData, promo_tag: e.target.value })}
+                      placeholder="e.g., 50% OFF, Limited Time"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="stock_quantity">Stock Quantity *</Label>
+                    <Input
+                      id="stock_quantity"
+                      type="number"
+                      min="0"
+                      value={formData.stock_quantity}
+                      onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
+                      required
+                    />
+                  </div>
                 </div>
                 
                 <div className="flex items-center space-x-2">
@@ -257,7 +281,7 @@ const AdminDashboard = () => {
                   <Label htmlFor="in_stock">In Stock</Label>
                 </div>
                 
-                <div className="flex space-x-2">
+                <div className="flex space-x-2 pt-4">
                   <Button type="submit" className="flex-1">
                     {editingProduct ? 'Update' : 'Add'} Product
                   </Button>

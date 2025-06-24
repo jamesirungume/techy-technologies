@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
 import { toast } from 'sonner';
+import { getProductById } from '@/utils/productData';
 
 interface CartItem {
   id: string;
@@ -48,7 +49,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const savedCart = localStorage.getItem('techy-cart');
     if (savedCart) {
-      setLocalCart(JSON.parse(savedCart));
+      try {
+        setLocalCart(JSON.parse(savedCart));
+      } catch (error) {
+        console.error('Error loading cart from localStorage:', error);
+        setLocalCart({});
+      }
     }
   }, []);
 
@@ -68,19 +74,25 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setLoading(true);
       try {
-        const { data: products, error } = await supabase
-          .from('products')
-          .select('id, name, price, image_url, stock_quantity')
-          .in('id', productIds);
-
-        if (error) throw error;
-
-        const cartItems: CartItem[] = products?.map(product => ({
-          id: `local-${product.id}`,
-          product_id: product.id,
-          quantity: localCart[product.id] || 1,
-          product: product
-        })) || [];
+        const cartItems: CartItem[] = [];
+        
+        for (const productId of productIds) {
+          const product = getProductById(productId);
+          if (product) {
+            cartItems.push({
+              id: `local-${product.id}`,
+              product_id: product.id,
+              quantity: localCart[product.id] || 1,
+              product: {
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                image_url: product.image_url,
+                stock_quantity: product.stock_quantity
+              }
+            });
+          }
+        }
 
         setItems(cartItems);
       } catch (error) {
@@ -124,12 +136,18 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user, localCart]);
 
   const addToCart = async (productId: string, quantity = 1) => {
+    console.log('Adding to cart:', productId, quantity);
+    
     if (!user) {
       // Add to local cart
-      setLocalCart(prev => ({
-        ...prev,
-        [productId]: (prev[productId] || 0) + quantity
-      }));
+      setLocalCart(prev => {
+        const newCart = {
+          ...prev,
+          [productId]: (prev[productId] || 0) + quantity
+        };
+        console.log('Updated local cart:', newCart);
+        return newCart;
+      });
       return;
     }
 
