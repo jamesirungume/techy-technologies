@@ -1,18 +1,33 @@
 
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { ShoppingCart, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Product } from '../utils/productData';
+import { useCart } from '@/contexts/CartContext';
+
+interface Product {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  image_url: string;
+  category: string;
+  main_tag?: string;
+  promo_tag?: string;
+  in_stock: boolean;
+  stock_quantity: number;
+}
 
 interface ProductCardProps {
   product: Product;
-  index?: number;
+  index: number;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ product, index }) => {
   const navigate = useNavigate();
+  const { addToCart } = useCart();
 
   const getTagColor = (tag: string) => {
     switch (tag) {
@@ -29,23 +44,37 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
     }
   };
 
+  const handleAddToCart = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await addToCart(product.id);
+  };
+
   return (
-    <Card
-      className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-2 cursor-pointer animate-fade-in"
-      onClick={() => navigate(`/product/${product.id}`)}
-      style={{ animationDelay: `${index * 0.1}s` }}
+    <Card 
+      className="group hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1"
+      style={{ animationDelay: `${index * 100}ms` }}
     >
       <CardContent className="p-0">
         <div className="relative overflow-hidden">
           <img
-            src={product.image}
+            src={product.image_url}
             alt={product.name}
             className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
+            onClick={() => navigate(`/product/${product.id}`)}
           />
-          <Badge className={`absolute top-2 right-2 ${getTagColor(product.tag)}`}>
-            {product.tag}
-          </Badge>
-          {!product.inStock && (
+          <div className="absolute top-2 right-2 flex flex-col gap-1">
+            {product.main_tag && (
+              <Badge className={`${getTagColor(product.main_tag)} text-white`}>
+                {product.main_tag}
+              </Badge>
+            )}
+            {product.promo_tag && (
+              <Badge className="bg-orange-500 hover:bg-orange-600 text-white">
+                {product.promo_tag}
+              </Badge>
+            )}
+          </div>
+          {!product.in_stock && (
             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
               <Badge variant="destructive" className="text-lg px-4 py-2">
                 Out of Stock
@@ -53,25 +82,49 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
             </div>
           )}
         </div>
-        <div className="p-6">
-          <div className="mb-2">
+        
+        <div className="p-4">
+          <div className="flex justify-between items-start mb-2">
             <Badge variant="outline" className="text-xs">
               {product.category}
             </Badge>
+            <Badge variant={product.in_stock ? "outline" : "destructive"} className="text-xs">
+              {product.in_stock ? `${product.stock_quantity} in stock` : "Out of Stock"}
+            </Badge>
           </div>
-          <h3 className="font-semibold text-lg mb-2 group-hover:text-primary transition-colors">
+          
+          <h3 
+            className="font-semibold text-lg mb-2 line-clamp-2 cursor-pointer hover:text-primary"
+            onClick={() => navigate(`/product/${product.id}`)}
+          >
             {product.name}
           </h3>
-          <p className="text-gray-600 mb-3 text-sm line-clamp-2">{product.description}</p>
+          
+          {product.description && (
+            <p className="text-gray-600 text-sm mb-3 line-clamp-2">{product.description}</p>
+          )}
+          
           <div className="flex items-center justify-between">
-            <span className="text-2xl font-bold text-primary">${product.price}</span>
-            <Button 
-              size="sm" 
-              className="hover-scale"
-              disabled={!product.inStock}
-            >
-              {product.inStock ? 'View Details' : 'Unavailable'}
-            </Button>
+            <span className="text-xl font-bold text-primary">${product.price}</span>
+            <div className="flex space-x-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => navigate(`/product/${product.id}`)}
+              >
+                <Eye className="h-4 w-4 mr-1" />
+                View
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleAddToCart}
+                disabled={!product.in_stock}
+                className="bg-primary hover:bg-primary/90"
+              >
+                <ShoppingCart className="h-4 w-4 mr-1" />
+                Add to Cart
+              </Button>
+            </div>
           </div>
         </div>
       </CardContent>
