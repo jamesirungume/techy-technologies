@@ -101,21 +101,31 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       const { data, error } = await supabase
         .from('wishlist')
-        .select(`
-          id,
-          product_id,
-          product:products (
-            id,
-            name,
-            price,
-            image_url,
-            category
-          )
-        `)
+        .select('*')
         .eq('user_id', user.id);
 
       if (error) throw error;
-      setItems(data || []);
+      
+      // Transform the data to include product information
+      const wishlistItems: WishlistItem[] = [];
+      for (const item of data || []) {
+        const product = getProductById(item.product_id);
+        if (product) {
+          wishlistItems.push({
+            id: item.id,
+            product_id: item.product_id,
+            product: {
+              id: product.id,
+              name: product.name,
+              price: product.price,
+              image_url: product.image_url,
+              category: product.category
+            }
+          });
+        }
+      }
+      
+      setItems(wishlistItems);
     } catch (error) {
       console.error('Error fetching wishlist:', error);
     } finally {
