@@ -64,15 +64,13 @@ const ProductDetail = () => {
           <div className="space-y-4">
             <div className="relative">
               <img
-                src={product.image_url}
+                src={product.image}
                 alt={product.name}
                 className="w-full h-96 object-cover rounded-lg shadow-lg"
               />
-              {product.main_tag && (
-                <Badge className={`absolute top-4 right-4 ${getTagColor(product.main_tag)} text-lg px-4 py-2`}>
-                  {product.main_tag}
-                </Badge>
-              )}
+              <Badge className={`absolute top-4 right-4 ${getTagColor(product.tag)} text-lg px-4 py-2`}>
+                {product.tag}
+              </Badge>
             </div>
           </div>
 
@@ -88,8 +86,8 @@ const ProductDetail = () => {
             <div className="space-y-4">
               <div className="flex items-center space-x-4">
                 <span className="text-4xl font-bold text-primary">${product.price}</span>
-                <Badge variant={product.in_stock ? "outline" : "destructive"}>
-                  {product.in_stock ? "In Stock" : "Out of Stock"}
+                <Badge variant={product.inStock ? "outline" : "destructive"}>
+                  {product.inStock ? "In Stock" : "Out of Stock"}
                 </Badge>
               </div>
 
@@ -97,10 +95,10 @@ const ProductDetail = () => {
                 <Button
                   size="lg"
                   className="flex-1"
-                  disabled={!product.in_stock}
+                  disabled={!product.inStock}
                 >
                   <ShoppingCart className="h-5 w-5 mr-2" />
-                  {product.in_stock ? "Add to Cart" : "Out of Stock"}
+                  {product.inStock ? "Add to Cart" : "Out of Stock"}
                 </Button>
                 <Button
                   size="lg"
@@ -120,21 +118,15 @@ const ProductDetail = () => {
                     <span className="text-gray-600">Category:</span>
                     <span>{product.category}</span>
                   </div>
-                  {product.main_tag && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Tag:</span>
-                      <span>{product.main_tag}</span>
-                    </div>
-                  )}
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Availability:</span>
-                    <span className={product.in_stock ? "text-green-600" : "text-red-600"}>
-                      {product.in_stock ? "In Stock" : "Out of Stock"}
-                    </span>
+                    <span className="text-gray-600">Tag:</span>
+                    <span>{product.tag}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Stock Quantity:</span>
-                    <span>{product.stock_quantity}</span>
+                    <span className="text-gray-600">Availability:</span>
+                    <span className={product.inStock ? "text-green-600" : "text-red-600"}>
+                      {product.inStock ? "In Stock" : "Out of Stock"}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Product ID:</span>

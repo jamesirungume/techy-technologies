@@ -33,7 +33,7 @@ const Products = () => {
     // Tag filter
     const tag = searchParams.get('tag');
     if (tag) {
-      filtered = filtered.filter(product => product.main_tag === tag);
+      filtered = filtered.filter(product => product.tag === tag);
     }
 
     // Price filter

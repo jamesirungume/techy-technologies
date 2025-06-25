@@ -9,7 +9,7 @@ import { getProducts } from '../utils/productData';
 const PopularDevices = () => {
   const navigate = useNavigate();
   const products = getProducts();
-  const popularProducts = products.filter(p => p.main_tag === 'Hot' || p.main_tag === 'Featured').slice(0, 6);
+  const popularProducts = products.filter(p => p.tag === 'Hot' || p.tag === 'Featured').slice(0, 6);
 
   return (
     <section className="py-16 bg-gray-50">
@@ -30,12 +30,12 @@ const PopularDevices = () => {
               <CardContent className="p-0">
                 <div className="relative overflow-hidden">
                   <img
-                    src={product.image_url}
+                    src={product.image}
                     alt={product.name}
                     className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
                   />
                   <Badge className="absolute top-2 right-2 bg-red-500 hover:bg-red-600">
-                    {product.main_tag}
+                    {product.tag}
                   </Badge>
                 </div>
                 <div className="p-6">

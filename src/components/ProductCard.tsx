@@ -6,7 +6,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ShoppingCart, Eye, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/contexts/CartContext';
-import { useWishlist } from '@/contexts/WishlistContext';
 import { toast } from 'sonner';
 
 interface Product {
@@ -30,7 +29,7 @@ interface ProductCardProps {
 const ProductCard: React.FC<ProductCardProps> = ({ product, index }) => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const [isWishlisted, setIsWishlisted] = useState(false);
 
   const getTagColor = (tag: string) => {
     switch (tag) {
@@ -58,42 +57,33 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index }) => {
     }
   };
 
-  const handleWishlist = async (e: React.MouseEvent) => {
+  const handleWishlist = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const inWishlist = isInWishlist(product.id);
-    
-    try {
-      if (inWishlist) {
-        await removeFromWishlist(product.id);
-      } else {
-        await addToWishlist(product.id);
-      }
-    } catch (error) {
-      console.error('Error updating wishlist:', error);
-    }
+    setIsWishlisted(!isWishlisted);
+    toast.success(isWishlisted ? 'Removed from wishlist' : 'Added to wishlist');
   };
 
   return (
     <Card 
-      className="group hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1 h-full flex flex-col"
+      className="group hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1"
       style={{ animationDelay: `${index * 100}ms` }}
     >
-      <CardContent className="p-0 flex flex-col h-full">
+      <CardContent className="p-0">
         <div className="relative overflow-hidden">
           <img
             src={product.image_url}
             alt={product.name}
-            className="w-full h-48 sm:h-56 md:h-48 object-cover group-hover:scale-110 transition-transform duration-300"
+            className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
             onClick={() => navigate(`/product/${product.id}`)}
           />
           <div className="absolute top-2 right-2 flex flex-col gap-1">
             {product.main_tag && (
-              <Badge className={`${getTagColor(product.main_tag)} text-white text-xs`}>
+              <Badge className={`${getTagColor(product.main_tag)} text-white`}>
                 {product.main_tag}
               </Badge>
             )}
             {product.promo_tag && (
-              <Badge className="bg-orange-500 hover:bg-orange-600 text-white text-xs">
+              <Badge className="bg-orange-500 hover:bg-orange-600 text-white">
                 {product.promo_tag}
               </Badge>
             )}
@@ -102,10 +92,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index }) => {
             <Button
               size="icon"
               variant="ghost"
-              className={`bg-white/80 hover:bg-white h-8 w-8 ${isInWishlist(product.id) ? 'text-red-500' : 'text-gray-600'}`}
+              className={`bg-white/80 hover:bg-white ${isWishlisted ? 'text-red-500' : 'text-gray-600'}`}
               onClick={handleWishlist}
             >
-              <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
+              <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-current' : ''}`} />
             </Button>
           </div>
           {!product.in_stock && (
@@ -117,7 +107,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index }) => {
           )}
         </div>
         
-        <div className="p-3 sm:p-4 flex flex-col flex-grow">
+        <div className="p-4">
           <div className="flex justify-between items-start mb-2">
             <Badge variant="outline" className="text-xs">
               {product.category}
@@ -128,38 +118,34 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index }) => {
           </div>
           
           <h3 
-            className="font-semibold text-base sm:text-lg mb-2 line-clamp-2 cursor-pointer hover:text-primary flex-grow"
+            className="font-semibold text-lg mb-2 line-clamp-2 cursor-pointer hover:text-primary"
             onClick={() => navigate(`/product/${product.id}`)}
           >
             {product.name}
           </h3>
           
           {product.description && (
-            <p className="text-gray-600 text-sm mb-3 line-clamp-2 flex-grow">{product.description}</p>
+            <p className="text-gray-600 text-sm mb-3 line-clamp-2">{product.description}</p>
           )}
           
-          <div className="mt-auto">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-lg sm:text-xl font-bold text-primary">${product.price}</span>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xl font-bold text-primary">${product.price}</span>
+            <div className="flex space-x-2">
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => navigate(`/product/${product.id}`)}
-                className="w-full sm:w-auto text-xs sm:text-sm"
               >
-                <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                <Eye className="h-4 w-4 mr-1" />
                 View
               </Button>
               <Button
                 size="sm"
                 onClick={handleAddToCart}
                 disabled={!product.in_stock}
-                className="bg-primary hover:bg-primary/90 w-full sm:w-auto text-xs sm:text-sm"
+                className="bg-primary hover:bg-primary/90"
               >
-                <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                <ShoppingCart className="h-4 w-4 mr-1" />
                 Add to Cart
               </Button>
             </div>

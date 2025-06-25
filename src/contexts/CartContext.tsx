@@ -3,7 +3,6 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
 import { toast } from 'sonner';
-import { getProductById } from '@/utils/productData';
 
 interface CartItem {
   id: string;
@@ -49,12 +48,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const savedCart = localStorage.getItem('techy-cart');
     if (savedCart) {
-      try {
-        setLocalCart(JSON.parse(savedCart));
-      } catch (error) {
-        console.error('Error loading cart from localStorage:', error);
-        setLocalCart({});
-      }
+      setLocalCart(JSON.parse(savedCart));
     }
   }, []);
 
@@ -74,25 +68,19 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setLoading(true);
       try {
-        const cartItems: CartItem[] = [];
-        
-        for (const productId of productIds) {
-          const product = getProductById(productId);
-          if (product) {
-            cartItems.push({
-              id: `local-${product.id}`,
-              product_id: product.id,
-              quantity: localCart[product.id] || 1,
-              product: {
-                id: product.id,
-                name: product.name,
-                price: product.price,
-                image_url: product.image_url,
-                stock_quantity: product.stock_quantity
-              }
-            });
-          }
-        }
+        const { data: products, error } = await supabase
+          .from('products')
+          .select('id, name, price, image_url, stock_quantity')
+          .in('id', productIds);
+
+        if (error) throw error;
+
+        const cartItems: CartItem[] = products?.map(product => ({
+          id: `local-${product.id}`,
+          product_id: product.id,
+          quantity: localCart[product.id] || 1,
+          product: product
+        })) || [];
 
         setItems(cartItems);
       } catch (error) {
@@ -107,32 +95,22 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { data, error } = await supabase
         .from('cart')
-        .select('*')
+        .select(`
+          id,
+          product_id,
+          quantity,
+          product:products (
+            id,
+            name,
+            price,
+            image_url,
+            stock_quantity
+          )
+        `)
         .eq('user_id', user.id);
 
       if (error) throw error;
-      
-      // Transform the data to include product information
-      const cartItems: CartItem[] = [];
-      for (const item of data || []) {
-        const product = getProductById(item.product_id);
-        if (product) {
-          cartItems.push({
-            id: item.id,
-            product_id: item.product_id,
-            quantity: item.quantity,
-            product: {
-              id: product.id,
-              name: product.name,
-              price: product.price,
-              image_url: product.image_url,
-              stock_quantity: product.stock_quantity
-            }
-          });
-        }
-      }
-      
-      setItems(cartItems);
+      setItems(data || []);
     } catch (error) {
       console.error('Error fetching cart:', error);
       toast.error('Failed to load cart');
@@ -146,70 +124,34 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user, localCart]);
 
   const addToCart = async (productId: string, quantity = 1) => {
-    console.log('Adding to cart:', productId, quantity, 'User:', user?.id);
-    
     if (!user) {
       // Add to local cart
-      setLocalCart(prev => {
-        const newCart = {
-          ...prev,
-          [productId]: (prev[productId] || 0) + quantity
-        };
-        console.log('Updated local cart:', newCart);
-        return newCart;
-      });
-      toast.success('Added to cart!');
+      setLocalCart(prev => ({
+        ...prev,
+        [productId]: (prev[productId] || 0) + quantity
+      }));
       return;
     }
 
     try {
-      // Check if item already exists in cart
-      const { data: existingItem, error: fetchError } = await supabase
+      const { error } = await supabase
         .from('cart')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('product_id', productId)
-        .maybeSingle();
-
-      if (fetchError && fetchError.code !== 'PGRST116') {
-        console.error('Error checking existing cart item:', fetchError);
-        throw fetchError;
-      }
-
-      if (existingItem) {
-        // Update existing item
-        const { error } = await supabase
-          .from('cart')
-          .update({ quantity: existingItem.quantity + quantity })
-          .eq('id', existingItem.id);
-
-        if (error) {
-          console.error('Error updating cart item:', error);
-          throw error;
-        }
-        console.log('Updated existing cart item');
-      } else {
-        // Insert new item
-        const { error } = await supabase
-          .from('cart')
-          .insert([{
+        .upsert(
+          {
             user_id: user.id,
             product_id: productId,
             quantity,
-          }]);
+          },
+          {
+            onConflict: 'user_id,product_id',
+          }
+        );
 
-        if (error) {
-          console.error('Error inserting cart item:', error);
-          throw error;
-        }
-        console.log('Inserted new cart item');
-      }
-
+      if (error) throw error;
       await fetchCartItems();
-      toast.success('Added to cart!');
     } catch (error) {
       console.error('Error adding to cart:', error);
-      toast.error('Failed to add to cart: ' + (error as Error).message);
+      toast.error('Failed to add to cart');
     }
   };
 
@@ -253,7 +195,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const newCart = { ...localCart };
       delete newCart[productId];
       setLocalCart(newCart);
-      toast.success('Item removed from cart');
       return;
     }
 
