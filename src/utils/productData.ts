@@ -29,7 +29,13 @@ export const getProducts = async (): Promise<Product[]> => {
     return [];
   }
 
-  return data || [];
+  // ✅ Ensure data is always an array
+  if (!Array.isArray(data)) {
+    console.error('Supabase returned non-array data:', data);
+    return [];
+  }
+
+  return data;
 };
 
 // Get single product by ID
@@ -48,8 +54,10 @@ export const getProductById = async (id: string): Promise<Product | null> => {
   return data;
 };
 
-// Optionally: Add a product (if needed elsewhere)
-export const addProduct = async (productData: Omit<Product, 'id' | 'created_at' | 'in_stock'>): Promise<Product | null> => {
+// Add a product
+export const addProduct = async (
+  productData: Omit<Product, 'id' | 'created_at' | 'in_stock'>
+): Promise<Product | null> => {
   const { data, error } = await supabase
     .from('products')
     .insert([{ ...productData, in_stock: productData.stock_quantity > 0 }])
@@ -65,7 +73,10 @@ export const addProduct = async (productData: Omit<Product, 'id' | 'created_at' 
 };
 
 // Update a product
-export const updateProduct = async (id: string, updates: Partial<Product>): Promise<Product | null> => {
+export const updateProduct = async (
+  id: string,
+  updates: Partial<Product>
+): Promise<Product | null> => {
   const { data, error } = await supabase
     .from('products')
     .update(updates)
