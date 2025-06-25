@@ -39,14 +39,11 @@ const AdminDashboard = () => {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching products:', error);
-        return;
-      }
-      
+      if (error) throw error;
       setProducts(data || []);
     } catch (error) {
       console.error('Error fetching products:', error);
+      toast.error('Failed to fetch products');
     }
   };
 
@@ -62,15 +59,15 @@ const AdminDashboard = () => {
 
     try {
       const productData = {
-        name: productForm.name.trim(),
-        description: productForm.description.trim() || null,
-        price: parseFloat(productForm.price),
-        image_url: productForm.image_url.trim() || null,
+        name: productForm.name,
+        description: productForm.description || null,
+        price: Number(productForm.price),
+        image_url: productForm.image_url || null,
         category: productForm.category,
         main_tag: productForm.main_tag || null,
-        promo_tag: productForm.promo_tag.trim() || null,
-        stock_quantity: parseInt(productForm.stock_quantity),
-        in_stock: parseInt(productForm.stock_quantity) > 0,
+        promo_tag: productForm.promo_tag || null,
+        stock_quantity: Number(productForm.stock_quantity),
+        in_stock: Number(productForm.stock_quantity) > 0,
         seller_id: user?.id || null
       };
 
@@ -78,13 +75,12 @@ const AdminDashboard = () => {
 
       const { data, error } = await supabase
         .from('products')
-        .insert([productData])
-        .select()
-        .single();
+        .insert(productData)
+        .select();
 
       if (error) {
-        console.error('Supabase error details:', error);
-        throw new Error(error.message || 'Failed to add product');
+        console.error('Supabase error:', error);
+        throw error;
       }
 
       console.log('Product added successfully:', data);
