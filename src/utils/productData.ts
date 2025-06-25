@@ -1,31 +1,38 @@
+// lib/api/getProducts.ts
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface Product {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   price: number;
-  image_url: string;
+  image_url: string | null;
   category: string;
-  main_tag?: string;
-  promo_tag?: string;
+  main_tag?: string | null;
+  promo_tag?: string | null;
   in_stock: boolean;
   stock_quantity: number;
+  created_at?: string;
   seller_id?: string | null;
 }
 
-// Fetch all products
+// Get all products
 export const getProducts = async (): Promise<Product[]> => {
   const { data, error } = await supabase
     .from('products')
     .select('*')
     .order('created_at', { ascending: false });
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error('Error fetching products:', error.message);
+    return [];
+  }
+
   return data || [];
 };
 
-// Fetch one product by ID
+// Get single product by ID
 export const getProductById = async (id: string): Promise<Product | null> => {
   const { data, error } = await supabase
     .from('products')
@@ -33,47 +40,44 @@ export const getProductById = async (id: string): Promise<Product | null> => {
     .eq('id', id)
     .single();
 
-  if (error) return null;
+  if (error) {
+    console.error('Error fetching product by ID:', error.message);
+    return null;
+  }
+
   return data;
 };
 
-// Add a new product
-export const addProduct = async (productData: Omit<Product, 'id' | 'in_stock'>): Promise<Product> => {
-  const newProduct = {
-    ...productData,
-    in_stock: productData.stock_quantity > 0,
-  };
-
+// Optionally: Add a product (if needed elsewhere)
+export const addProduct = async (productData: Omit<Product, 'id' | 'created_at' | 'in_stock'>): Promise<Product | null> => {
   const { data, error } = await supabase
     .from('products')
-    .insert([newProduct])
+    .insert([{ ...productData, in_stock: productData.stock_quantity > 0 }])
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error('Error adding product:', error.message);
+    return null;
+  }
+
   return data;
 };
 
-// Update an existing product
-export const updateProduct = async (
-  id: string,
-  productData: Partial<Omit<Product, 'id' | 'in_stock'>>
-): Promise<Product | null> => {
-  const updatedData = {
-    ...productData,
-    ...(productData.stock_quantity !== undefined && {
-      in_stock: productData.stock_quantity > 0
-    })
-  };
-
+// Update a product
+export const updateProduct = async (id: string, updates: Partial<Product>): Promise<Product | null> => {
   const { data, error } = await supabase
     .from('products')
-    .update(updatedData)
+    .update(updates)
     .eq('id', id)
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error('Error updating product:', error.message);
+    return null;
+  }
+
   return data;
 };
 
@@ -85,7 +89,7 @@ export const deleteProduct = async (id: string): Promise<boolean> => {
     .eq('id', id);
 
   if (error) {
-    console.error('Failed to delete product:', error);
+    console.error('Error deleting product:', error.message);
     return false;
   }
 
