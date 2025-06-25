@@ -70,7 +70,7 @@ const AdminDashboard = () => {
         main_tag: productForm.main_tag || null,
         promo_tag: productForm.promo_tag.trim() || null,
         stock_quantity: parseInt(productForm.stock_quantity),
-        in_stock: parseInt(productForm.stock_quantity) > 0,
+        in_stock: parseInt(productForm.stock_quantity),
         seller_id: user?.id || null
       };
 
