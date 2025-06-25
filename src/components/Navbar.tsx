@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
+import { useWishlist } from '@/contexts/WishlistContext';
+import TechyLogo from './TechyLogo';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -15,6 +17,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { getTotalItems } = useCart();
+  const { items: wishlistItems } = useWishlist();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +32,7 @@ const Navbar = () => {
   };
 
   const cartItemCount = getTotalItems();
+  const wishlistItemCount = wishlistItems.length;
 
   return (
     <nav className="bg-white shadow-lg sticky top-0 z-50">
@@ -37,10 +41,10 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div 
-            className="text-2xl font-bold text-primary cursor-pointer"
+            className="cursor-pointer"
             onClick={() => navigate('/')}
           >
-            Techy
+            <TechyLogo />
           </div>
 
           {/* Desktop Search */}
@@ -72,6 +76,11 @@ const Navbar = () => {
               onClick={() => navigate('/wishlist')}
             >
               <Heart className="h-5 w-5" />
+              {wishlistItemCount > 0 && (
+                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                  {wishlistItemCount}
+                </Badge>
+              )}
             </Button>
             
             <Button
@@ -89,7 +98,7 @@ const Navbar = () => {
             
             <Button
               variant="ghost"
-              onClick={() => navigate('/auth')}
+              onClick={() => navigate('/admin')}
             >
               Seller?
             </Button>
@@ -219,7 +228,7 @@ const Navbar = () => {
                 onClick={() => {navigate('/wishlist'); setIsMenuOpen(false);}}
               >
                 <Heart className="h-5 w-5 mr-2" />
-                Wishlist
+                Wishlist {wishlistItemCount > 0 && `(${wishlistItemCount})`}
               </Button>
               
               <Button
@@ -234,7 +243,7 @@ const Navbar = () => {
               <Button
                 variant="ghost"
                 className="justify-start"
-                onClick={() => {navigate('/auth'); setIsMenuOpen(false);}}
+                onClick={() => {navigate('/admin'); setIsMenuOpen(false);}}
               >
                 Seller?
               </Button>
