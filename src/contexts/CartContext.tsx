@@ -107,32 +107,22 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { data, error } = await supabase
         .from('cart')
-        .select('*')
+        .select(`
+          id,
+          product_id,
+          quantity,
+          product:products (
+            id,
+            name,
+            price,
+            image_url,
+            stock_quantity
+          )
+        `)
         .eq('user_id', user.id);
 
       if (error) throw error;
-      
-      // Transform the data to include product information
-      const cartItems: CartItem[] = [];
-      for (const item of data || []) {
-        const product = getProductById(item.product_id);
-        if (product) {
-          cartItems.push({
-            id: item.id,
-            product_id: item.product_id,
-            quantity: item.quantity,
-            product: {
-              id: product.id,
-              name: product.name,
-              price: product.price,
-              image_url: product.image_url,
-              stock_quantity: product.stock_quantity
-            }
-          });
-        }
-      }
-      
-      setItems(cartItems);
+      setItems(data || []);
     } catch (error) {
       console.error('Error fetching cart:', error);
       toast.error('Failed to load cart');
@@ -146,7 +136,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user, localCart]);
 
   const addToCart = async (productId: string, quantity = 1) => {
-    console.log('Adding to cart:', productId, quantity, 'User:', user?.id);
+    console.log('Adding to cart:', productId, quantity);
     
     if (!user) {
       // Add to local cart
@@ -158,36 +148,27 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('Updated local cart:', newCart);
         return newCart;
       });
-      toast.success('Added to cart!');
       return;
     }
 
     try {
       // Check if item already exists in cart
-      const { data: existingItem, error: fetchError } = await supabase
+      const { data: existingItem } = await supabase
         .from('cart')
         .select('*')
         .eq('user_id', user.id)
         .eq('product_id', productId)
-        .maybeSingle();
-
-      if (fetchError) {
-        console.error('Error checking existing cart item:', fetchError);
-        throw fetchError;
-      }
+        .single();
 
       if (existingItem) {
         // Update existing item
         const { error } = await supabase
           .from('cart')
           .update({ quantity: existingItem.quantity + quantity })
-          .eq('id', existingItem.id);
+          .eq('user_id', user.id)
+          .eq('product_id', productId);
 
-        if (error) {
-          console.error('Error updating cart item:', error);
-          throw error;
-        }
-        console.log('Updated existing cart item');
+        if (error) throw error;
       } else {
         // Insert new item
         const { error } = await supabase
@@ -198,18 +179,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             quantity,
           });
 
-        if (error) {
-          console.error('Error inserting cart item:', error);
-          throw error;
-        }
-        console.log('Inserted new cart item');
+        if (error) throw error;
       }
 
       await fetchCartItems();
-      toast.success('Added to cart!');
     } catch (error) {
       console.error('Error adding to cart:', error);
-      toast.error('Failed to add to cart: ' + (error as Error).message);
+      toast.error('Failed to add to cart');
     }
   };
 
@@ -253,7 +229,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const newCart = { ...localCart };
       delete newCart[productId];
       setLocalCart(newCart);
-      toast.success('Item removed from cart');
       return;
     }
 
