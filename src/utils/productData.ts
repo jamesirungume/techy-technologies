@@ -1,4 +1,5 @@
 // lib/api/getProducts.ts
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface Product {
@@ -16,7 +17,7 @@ export interface Product {
   seller_id?: string | null;
 }
 
-// ✅ Get all products
+// Fetch all products safely
 export const getProducts = async (): Promise<Product[]> => {
   const { data, error } = await supabase
     .from('products')
@@ -28,10 +29,15 @@ export const getProducts = async (): Promise<Product[]> => {
     return [];
   }
 
-  return data ?? [];
+  if (!Array.isArray(data)) {
+    console.error('Data received is not an array:', data);
+    return [];
+  }
+
+  return data;
 };
 
-// ✅ Get one product by ID
+// Fetch a single product by ID
 export const getProductById = async (id: string): Promise<Product | null> => {
   const { data, error } = await supabase
     .from('products')
@@ -47,15 +53,13 @@ export const getProductById = async (id: string): Promise<Product | null> => {
   return data;
 };
 
-// ✅ Add a product
+// Add a new product
 export const addProduct = async (
   productData: Omit<Product, 'id' | 'created_at' | 'in_stock'>
 ): Promise<Product | null> => {
   const { data, error } = await supabase
     .from('products')
-    .insert([
-      { ...productData, in_stock: productData.stock_quantity > 0 }
-    ])
+    .insert([{ ...productData, in_stock: productData.stock_quantity > 0 }])
     .select()
     .single();
 
@@ -67,7 +71,7 @@ export const addProduct = async (
   return data;
 };
 
-// ✅ Update product
+// Update an existing product
 export const updateProduct = async (
   id: string,
   updates: Partial<Product>
@@ -87,12 +91,9 @@ export const updateProduct = async (
   return data;
 };
 
-// ✅ Delete product
+// Delete a product
 export const deleteProduct = async (id: string): Promise<boolean> => {
-  const { error } = await supabase
-    .from('products')
-    .delete()
-    .eq('id', id);
+  const { error } = await supabase.from('products').delete().eq('id', id);
 
   if (error) {
     console.error('Error deleting product:', error.message);
