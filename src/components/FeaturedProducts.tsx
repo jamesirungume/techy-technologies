@@ -52,37 +52,37 @@ const FeaturedProducts = () => {
                     {product.main_tag}
                   </Badge>
                 </div>
-                <div className="p-6">
-                  <h3 className="font-semibold text-lg mb-2 text-white group-hover:text-yellow-400 transition-colors">
+                <div className="p-4">
+                  <h3 className="font-semibold text-lg mb-2 text-white group-hover:text-yellow-400 transition-colors line-clamp-1">
                     {product.name}
                   </h3>
-                  <p className="text-gray-300 mb-3 text-sm">{product.description}</p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold text-yellow-400">${product.price}</span>
-                    <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="text-white border-white bg-transparent hover:bg-white hover:text-black"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/product/${product.id}`);
-                        }}
-                      >
-                        View Details
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="bg-yellow-500 text-black hover:bg-yellow-600"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAddToCart(product.id);
-                        }}
-                      >
-                        <ShoppingCart className="h-4 w-4 mr-1" />
-                        Add to Cart
-                      </Button>
-                    </div>
+                  <p className="text-gray-300 mb-3 text-sm line-clamp-2">{product.description}</p>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xl font-bold text-yellow-400">${product.price}</span>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="text-white border-white bg-transparent hover:bg-white hover:text-black w-full sm:w-auto text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/product/${product.id}`);
+                      }}
+                    >
+                      View Details
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="bg-yellow-500 text-black hover:bg-yellow-600 w-full sm:w-auto text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddToCart(product.id);
+                      }}
+                    >
+                      <ShoppingCart className="h-3 w-3 mr-1" />
+                      Add to Cart
+                    </Button>
                   </div>
                 </div>
               </CardContent>

@@ -152,20 +152,36 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const { error } = await supabase
+      // Check if item already exists in cart
+      const { data: existingItem } = await supabase
         .from('cart')
-        .upsert(
-          {
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('product_id', productId)
+        .single();
+
+      if (existingItem) {
+        // Update existing item
+        const { error } = await supabase
+          .from('cart')
+          .update({ quantity: existingItem.quantity + quantity })
+          .eq('user_id', user.id)
+          .eq('product_id', productId);
+
+        if (error) throw error;
+      } else {
+        // Insert new item
+        const { error } = await supabase
+          .from('cart')
+          .insert({
             user_id: user.id,
             product_id: productId,
             quantity,
-          },
-          {
-            onConflict: 'user_id,product_id',
-          }
-        );
+          });
 
-      if (error) throw error;
+        if (error) throw error;
+      }
+
       await fetchCartItems();
     } catch (error) {
       console.error('Error adding to cart:', error);

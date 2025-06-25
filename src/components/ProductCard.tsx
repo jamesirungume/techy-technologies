@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ShoppingCart, Eye, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/contexts/CartContext';
+import { useWishlist } from '@/contexts/WishlistContext';
 import { toast } from 'sonner';
 
 interface Product {
@@ -29,7 +30,7 @@ interface ProductCardProps {
 const ProductCard: React.FC<ProductCardProps> = ({ product, index }) => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const [isWishlisted, setIsWishlisted] = useState(false);
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
 
   const getTagColor = (tag: string) => {
     switch (tag) {
@@ -57,10 +58,19 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index }) => {
     }
   };
 
-  const handleWishlist = (e: React.MouseEvent) => {
+  const handleWishlist = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsWishlisted(!isWishlisted);
-    toast.success(isWishlisted ? 'Removed from wishlist' : 'Added to wishlist');
+    const inWishlist = isInWishlist(product.id);
+    
+    try {
+      if (inWishlist) {
+        await removeFromWishlist(product.id);
+      } else {
+        await addToWishlist(product.id);
+      }
+    } catch (error) {
+      console.error('Error updating wishlist:', error);
+    }
   };
 
   return (
@@ -92,10 +102,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index }) => {
             <Button
               size="icon"
               variant="ghost"
-              className={`bg-white/80 hover:bg-white h-8 w-8 ${isWishlisted ? 'text-red-500' : 'text-gray-600'}`}
+              className={`bg-white/80 hover:bg-white h-8 w-8 ${isInWishlist(product.id) ? 'text-red-500' : 'text-gray-600'}`}
               onClick={handleWishlist}
             >
-              <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-current' : ''}`} />
+              <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
             </Button>
           </div>
           {!product.in_stock && (

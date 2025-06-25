@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
+import { useWishlist } from '@/contexts/WishlistContext';
 import TechyLogo from './TechyLogo';
 
 const Navbar = () => {
@@ -16,6 +17,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { getTotalItems } = useCart();
+  const { items: wishlistItems } = useWishlist();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,15 +31,8 @@ const Navbar = () => {
     navigate('/');
   };
 
-  const handleProtectedRoute = (route: string) => {
-    if (!user && (route === '/cart' || route === '/wishlist' || route === '/checkout')) {
-      navigate('/auth');
-      return;
-    }
-    navigate(route);
-  };
-
   const cartItemCount = getTotalItems();
+  const wishlistItemCount = wishlistItems.length;
 
   return (
     <nav className="bg-white shadow-lg sticky top-0 z-50">
@@ -78,15 +73,20 @@ const Navbar = () => {
             <Button
               variant="ghost"
               className="relative"
-              onClick={() => handleProtectedRoute('/wishlist')}
+              onClick={() => navigate('/wishlist')}
             >
               <Heart className="h-5 w-5" />
+              {wishlistItemCount > 0 && (
+                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                  {wishlistItemCount}
+                </Badge>
+              )}
             </Button>
             
             <Button
               variant="ghost"
               className="relative"
-              onClick={() => handleProtectedRoute('/cart')}
+              onClick={() => navigate('/cart')}
             >
               <ShoppingCart className="h-5 w-5" />
               {cartItemCount > 0 && (
@@ -225,16 +225,16 @@ const Navbar = () => {
               <Button
                 variant="ghost"
                 className="justify-start relative"
-                onClick={() => {handleProtectedRoute('/wishlist'); setIsMenuOpen(false);}}
+                onClick={() => {navigate('/wishlist'); setIsMenuOpen(false);}}
               >
                 <Heart className="h-5 w-5 mr-2" />
-                Wishlist
+                Wishlist {wishlistItemCount > 0 && `(${wishlistItemCount})`}
               </Button>
               
               <Button
                 variant="ghost"
                 className="justify-start relative"
-                onClick={() => {handleProtectedRoute('/cart'); setIsMenuOpen(false);}}
+                onClick={() => {navigate('/cart'); setIsMenuOpen(false);}}
               >
                 <ShoppingCart className="h-5 w-5 mr-2" />
                 Cart {cartItemCount > 0 && `(${cartItemCount})`}

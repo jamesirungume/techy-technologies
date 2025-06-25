@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { getProducts, addProduct, updateProduct, deleteProduct, Product } from '../utils/productData';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 const AdminDashboard = () => {
   const [products, setProducts] = useState<Product[]>(getProducts());
@@ -34,17 +35,7 @@ const AdminDashboard = () => {
     stock_quantity: ''
   });
 
-  // Redirect to auth if not logged in
-  useEffect(() => {
-    if (!user) {
-      navigate('/auth');
-    }
-  }, [user, navigate]);
-
-  if (!user) {
-    return null;
-  }
-
+  // Allow access to admin without authentication
   const refreshProducts = () => {
     setProducts(getProducts());
   };
@@ -53,7 +44,7 @@ const AdminDashboard = () => {
     e.preventDefault();
     
     if (!formData.name || !formData.description || !formData.price || !formData.category) {
-      alert('Please fill in all required fields');
+      toast.error('Please fill in all required fields');
       return;
     }
 
@@ -69,14 +60,21 @@ const AdminDashboard = () => {
       stock_quantity: parseInt(formData.stock_quantity) || 0
     };
 
-    if (editingProduct) {
-      updateProduct(editingProduct.id, productData);
-    } else {
-      addProduct(productData);
-    }
+    try {
+      if (editingProduct) {
+        updateProduct(editingProduct.id, productData);
+        toast.success('Product updated successfully!');
+      } else {
+        addProduct(productData);
+        toast.success('Product added successfully!');
+      }
 
-    resetForm();
-    refreshProducts();
+      resetForm();
+      refreshProducts();
+    } catch (error) {
+      console.error('Error saving product:', error);
+      toast.error('Failed to save product');
+    }
   };
 
   const handleEdit = (product: Product) => {
@@ -97,8 +95,14 @@ const AdminDashboard = () => {
 
   const handleDelete = (id: string) => {
     if (confirm('Are you sure you want to delete this product?')) {
-      deleteProduct(id);
-      refreshProducts();
+      try {
+        deleteProduct(id);
+        refreshProducts();
+        toast.success('Product deleted successfully!');
+      } catch (error) {
+        console.error('Error deleting product:', error);
+        toast.error('Failed to delete product');
+      }
     }
   };
 
@@ -155,15 +159,15 @@ const AdminDashboard = () => {
               </Button>
             </DialogTrigger>
             
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
                   {editingProduct ? 'Edit Product' : 'Add New Product'}
                 </DialogTitle>
               </DialogHeader>
               
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <Label htmlFor="name">Product Name *</Label>
                     <Input
@@ -194,7 +198,7 @@ const AdminDashboard = () => {
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     required
-                    rows={3}
+                    rows={4}
                   />
                 </div>
                 
@@ -209,7 +213,7 @@ const AdminDashboard = () => {
                   />
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <Label htmlFor="category">Category *</Label>
                     <Select
@@ -245,18 +249,6 @@ const AdminDashboard = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="promo_tag">Promo Tag (Optional)</Label>
-                    <Input
-                      id="promo_tag"
-                      value={formData.promo_tag}
-                      onChange={(e) => setFormData({ ...formData, promo_tag: e.target.value })}
-                      placeholder="e.g., 50% OFF, Limited Time"
-                    />
-                  </div>
 
                   <div>
                     <Label htmlFor="stock_quantity">Stock Quantity *</Label>
@@ -270,6 +262,16 @@ const AdminDashboard = () => {
                     />
                   </div>
                 </div>
+
+                <div>
+                  <Label htmlFor="promo_tag">Promo Tag (Optional)</Label>
+                  <Input
+                    id="promo_tag"
+                    value={formData.promo_tag}
+                    onChange={(e) => setFormData({ ...formData, promo_tag: e.target.value })}
+                    placeholder="e.g., 50% OFF, Limited Time, Free Shipping"
+                  />
+                </div>
                 
                 <div className="flex items-center space-x-2">
                   <input
@@ -281,11 +283,11 @@ const AdminDashboard = () => {
                   <Label htmlFor="in_stock">In Stock</Label>
                 </div>
                 
-                <div className="flex space-x-2 pt-4">
+                <div className="flex space-x-4 pt-6">
                   <Button type="submit" className="flex-1">
                     {editingProduct ? 'Update' : 'Add'} Product
                   </Button>
-                  <Button type="button" variant="outline" onClick={resetForm}>
+                  <Button type="button" variant="outline" onClick={resetForm} className="flex-1">
                     Cancel
                   </Button>
                 </div>
@@ -309,6 +311,11 @@ const AdminDashboard = () => {
                       {product.main_tag}
                     </Badge>
                   )}
+                  {product.promo_tag && (
+                    <Badge className="absolute top-2 left-2 bg-orange-500 hover:bg-orange-600">
+                      {product.promo_tag}
+                    </Badge>
+                  )}
                 </div>
                 <div className="p-4">
                   <div className="flex justify-between items-start mb-2">
@@ -316,7 +323,7 @@ const AdminDashboard = () => {
                       {product.category}
                     </Badge>
                     <Badge variant={product.in_stock ? "outline" : "destructive"} className="text-xs">
-                      {product.in_stock ? "In Stock" : "Out of Stock"}
+                      {product.in_stock ? `${product.stock_quantity} in stock` : "Out of Stock"}
                     </Badge>
                   </div>
                   <h3 className="font-semibold text-lg mb-1">{product.name}</h3>
