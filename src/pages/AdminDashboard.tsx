@@ -11,7 +11,6 @@ import { toast } from 'sonner';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 
 const AdminDashboard = () => {
   const [productForm, setProductForm] = useState({
@@ -28,16 +27,10 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const { user } = useAuth();
-  const navigate = useNavigate();
 
   useEffect(() => {
-    if (!user) {
-      toast.error('Please sign in to access the admin dashboard');
-      navigate('/auth');
-      return;
-    }
     fetchProducts();
-  }, [user, navigate]);
+  }, []);
 
   const fetchProducts = async () => {
     try {
@@ -57,32 +50,43 @@ const AdminDashboard = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user) {
-      toast.error('Please sign in to add products');
+    if (!productForm.name || !productForm.price || !productForm.category || !productForm.stock_quantity) {
+      toast.error('Please fill in all required fields');
       return;
     }
 
     setLoading(true);
 
     try {
+      const productData = {
+        name: productForm.name,
+        description: productForm.description || null,
+        price: Number(productForm.price),
+        image_url: productForm.image_url || null,
+        category: productForm.category,
+        main_tag: productForm.main_tag || null,
+        promo_tag: productForm.promo_tag || null,
+        stock_quantity: Number(productForm.stock_quantity),
+        in_stock: Number(productForm.stock_quantity) > 0,
+        seller_id: user?.id || null
+      };
+
+      console.log('Submitting product data:', productData);
+
       const { data, error } = await supabase
         .from('products')
-        .insert({
-          name: productForm.name,
-          description: productForm.description,
-          price: Number(productForm.price),
-          image_url: productForm.image_url,
-          category: productForm.category,
-          main_tag: productForm.main_tag || null,
-          promo_tag: productForm.promo_tag || null,
-          stock_quantity: Number(productForm.stock_quantity),
-          seller_id: user.id
-        })
+        .insert(productData)
         .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
 
+      console.log('Product added successfully:', data);
       toast.success('Product added successfully!');
+      
+      // Reset form
       setProductForm({
         name: '',
         description: '',
@@ -98,34 +102,29 @@ const AdminDashboard = () => {
       await fetchProducts();
     } catch (error) {
       console.error('Error adding product:', error);
-      toast.error('Failed to add product');
+      toast.error('Failed to add product: ' + (error as Error).message);
     } finally {
       setLoading(false);
     }
   };
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
-            <p className="mb-4">Please sign in to access the admin dashboard.</p>
-            <Button onClick={() => navigate('/auth')}>Sign In</Button>
-          </div>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
+        <h1 className="text-3xl font-bold mb-8">Seller Dashboard</h1>
+        
+        {!user && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-blue-800">
+              <strong>Note:</strong> You can add products without signing in, but signing in will associate products with your account.
+              <Button variant="link" onClick={() => window.location.href = '/auth'} className="ml-2">
+                Sign In
+              </Button>
+            </p>
+          </div>
+        )}
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Add Product Form */}
@@ -134,7 +133,7 @@ const AdminDashboard = () => {
               <CardTitle>Add New Product</CardTitle>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Product Name *</Label>
@@ -152,6 +151,7 @@ const AdminDashboard = () => {
                       id="price"
                       type="number"
                       step="0.01"
+                      min="0"
                       value={productForm.price}
                       onChange={(e) => setProductForm({...productForm, price: e.target.value})}
                       required
@@ -176,6 +176,7 @@ const AdminDashboard = () => {
                     type="url"
                     value={productForm.image_url}
                     onChange={(e) => setProductForm({...productForm, image_url: e.target.value})}
+                    placeholder="https://example.com/image.jpg"
                   />
                 </div>
 
@@ -185,6 +186,7 @@ const AdminDashboard = () => {
                     <Select
                       value={productForm.category}
                       onValueChange={(value) => setProductForm({...productForm, category: value})}
+                      required
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select category" />
@@ -278,6 +280,9 @@ const AdminDashboard = () => {
                             {product.main_tag}
                           </span>
                         )}
+                        <p className="text-xs text-gray-400">
+                          {product.in_stock ? 'In Stock' : 'Out of Stock'}
+                        </p>
                       </div>
                     </div>
                   ))
