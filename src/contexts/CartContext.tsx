@@ -171,7 +171,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('product_id', productId)
         .maybeSingle();
 
-      if (fetchError) {
+      if (fetchError && fetchError.code !== 'PGRST116') {
         console.error('Error checking existing cart item:', fetchError);
         throw fetchError;
       }
@@ -192,11 +192,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Insert new item
         const { error } = await supabase
           .from('cart')
-          .insert({
+          .insert([{
             user_id: user.id,
             product_id: productId,
             quantity,
-          });
+          }]);
 
         if (error) {
           console.error('Error inserting cart item:', error);
