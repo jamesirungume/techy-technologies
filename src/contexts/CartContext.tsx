@@ -107,22 +107,32 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { data, error } = await supabase
         .from('cart')
-        .select(`
-          id,
-          product_id,
-          quantity,
-          product:products (
-            id,
-            name,
-            price,
-            image_url,
-            stock_quantity
-          )
-        `)
+        .select('*')
         .eq('user_id', user.id);
 
       if (error) throw error;
-      setItems(data || []);
+      
+      // Transform the data to include product information
+      const cartItems: CartItem[] = [];
+      for (const item of data || []) {
+        const product = getProductById(item.product_id);
+        if (product) {
+          cartItems.push({
+            id: item.id,
+            product_id: item.product_id,
+            quantity: item.quantity,
+            product: {
+              id: product.id,
+              name: product.name,
+              price: product.price,
+              image_url: product.image_url,
+              stock_quantity: product.stock_quantity
+            }
+          });
+        }
+      }
+      
+      setItems(cartItems);
     } catch (error) {
       console.error('Error fetching cart:', error);
       toast.error('Failed to load cart');
