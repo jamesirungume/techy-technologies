@@ -228,7 +228,7 @@ const AdminDashboard = () => {
                         <SelectValue placeholder="Select main tag" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="none">None</SelectItem>
                         <SelectItem value="New">New</SelectItem>
                         <SelectItem value="Featured">Featured</SelectItem>
                         <SelectItem value="Hot">Hot</SelectItem>
