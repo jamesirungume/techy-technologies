@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useAuth } from '@/contexts/AuthContext';
+import { Upload } from 'lucide-react';
 
 const AdminDashboard = () => {
   const [productForm, setProductForm] = useState({
@@ -25,6 +26,7 @@ const AdminDashboard = () => {
   });
 
   const [loading, setLoading] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const { user } = useAuth();
 
@@ -47,6 +49,38 @@ const AdminDashboard = () => {
       setProducts(data || []);
     } catch (error) {
       console.error('Error fetching products:', error);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImageUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `product-images/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('products')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('products')
+        .getPublicUrl(filePath);
+
+      setProductForm(prev => ({ ...prev, image_url: publicUrl }));
+      toast.success('Image uploaded successfully!');
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast.error('Failed to upload image');
+    } finally {
+      setImageUploading(false);
     }
   };
 
@@ -173,14 +207,40 @@ const AdminDashboard = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="image_url">Image URL</Label>
-                  <Input
-                    id="image_url"
-                    type="url"
-                    value={productForm.image_url}
-                    onChange={(e) => setProductForm({...productForm, image_url: e.target.value})}
-                    placeholder="https://example.com/image.jpg"
-                  />
+                  <Label htmlFor="image">Product Image</Label>
+                  <div className="flex flex-col space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Input
+                        id="image"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="flex-1"
+                        disabled={imageUploading}
+                      />
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm"
+                        disabled={imageUploading}
+                      >
+                        <Upload className="h-4 w-4 mr-1" />
+                        {imageUploading ? 'Uploading...' : 'Upload'}
+                      </Button>
+                    </div>
+                    <Input
+                      placeholder="Or enter image URL"
+                      value={productForm.image_url}
+                      onChange={(e) => setProductForm({...productForm, image_url: e.target.value})}
+                    />
+                    {productForm.image_url && (
+                      <img 
+                        src={productForm.image_url} 
+                        alt="Preview" 
+                        className="w-20 h-20 object-cover rounded border"
+                      />
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -247,7 +307,7 @@ const AdminDashboard = () => {
                   </div>
                 </div>
 
-                <Button type="submit" disabled={loading} className="w-full">
+                <Button type="submit" disabled={loading || imageUploading} className="w-full">
                   {loading ? 'Adding Product...' : 'Add Product'}
                 </Button>
               </form>

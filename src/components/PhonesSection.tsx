@@ -7,11 +7,13 @@ import { ShoppingCart, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getProducts, Product } from '../utils/productData';
 import { useCart } from '@/contexts/CartContext';
+import { useWishlist } from '@/contexts/WishlistContext';
 import { toast } from 'sonner';
 
 const PhonesSection = () => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -26,13 +28,29 @@ const PhonesSection = () => {
     fetchProducts();
   }, []);
 
-  const handleAddToCart = async (productId: string) => {
+  const handleAddToCart = async (productId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     try {
       await addToCart(productId);
       toast.success('Added to cart!');
     } catch (error) {
       console.error('Error adding to cart:', error);
       toast.error('Failed to add to cart');
+    }
+  };
+
+  const handleWishlist = async (productId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const inWishlist = isInWishlist(productId);
+    
+    try {
+      if (inWishlist) {
+        await removeFromWishlist(productId);
+      } else {
+        await addToWishlist(productId);
+      }
+    } catch (error) {
+      console.error('Error updating wishlist:', error);
     }
   };
 
@@ -88,9 +106,10 @@ const PhonesSection = () => {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="bg-white/80 hover:bg-white text-gray-600"
+                      className={`bg-white/80 hover:bg-white h-8 w-8 ${isInWishlist(product.id) ? 'text-red-500' : 'text-gray-600'}`}
+                      onClick={(e) => handleWishlist(product.id, e)}
                     >
-                      <Heart className="h-4 w-4" />
+                      <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
                     </Button>
                   </div>
                 </div>
@@ -106,10 +125,7 @@ const PhonesSection = () => {
                     <span className="text-2xl font-bold text-primary">${product.price}</span>
                     <Button
                       size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAddToCart(product.id);
-                      }}
+                      onClick={(e) => handleAddToCart(product.id, e)}
                       className="bg-primary hover:bg-primary/90"
                     >
                       <ShoppingCart className="h-4 w-4 mr-1" />

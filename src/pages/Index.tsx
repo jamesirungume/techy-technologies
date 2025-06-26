@@ -1,5 +1,6 @@
 
 import React from 'react';
+import ContactBar from '../components/ContactBar';
 import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
 import PromotionalBanners from '../components/PromotionalBanners';
@@ -13,6 +14,7 @@ import Footer from '../components/Footer';
 const Index = () => {
   return (
     <div className="min-h-screen bg-background">
+      <ContactBar />
       <Navbar />
       <Hero />
       <PromotionalBanners />

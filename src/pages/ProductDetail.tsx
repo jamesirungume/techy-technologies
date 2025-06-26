@@ -2,16 +2,20 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ShoppingCart } from 'lucide-react';
+import ContactBar from '../components/ContactBar';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { getProductById, Product } from '../utils/productData';
+import { useCart } from '@/contexts/CartContext';
+import { toast } from 'sonner';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { addToCart } = useCart();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -27,9 +31,22 @@ const ProductDetail = () => {
     fetchProduct();
   }, [id]);
 
+  const handleAddToCart = async () => {
+    if (!product) return;
+    
+    try {
+      await addToCart(product.id);
+      toast.success('Added to cart!');
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast.error('Failed to add to cart');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
+        <ContactBar />
         <Navbar />
         <div className="container mx-auto px-4 py-8">
           <div className="text-center py-12">
@@ -44,6 +61,7 @@ const ProductDetail = () => {
   if (!product) {
     return (
       <div className="min-h-screen bg-background">
+        <ContactBar />
         <Navbar />
         <div className="container mx-auto px-4 py-8">
           <div className="text-center py-12">
@@ -75,6 +93,7 @@ const ProductDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <ContactBar />
       <Navbar />
       
       <div className="container mx-auto px-4 py-8">
@@ -125,6 +144,7 @@ const ProductDetail = () => {
                   size="lg"
                   className="flex-1"
                   disabled={!product.in_stock}
+                  onClick={handleAddToCart}
                 >
                   <ShoppingCart className="h-5 w-5 mr-2" />
                   {product.in_stock ? "Add to Cart" : "Out of Stock"}
