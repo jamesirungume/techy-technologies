@@ -46,11 +46,14 @@ const PhonesSection = () => {
     try {
       if (inWishlist) {
         await removeFromWishlist(productId);
+        toast.success('Removed from wishlist');
       } else {
         await addToWishlist(productId);
+        toast.success('Added to wishlist');
       }
     } catch (error) {
       console.error('Error updating wishlist:', error);
+      toast.error('Failed to update wishlist');
     }
   };
 
@@ -127,9 +130,10 @@ const PhonesSection = () => {
                       size="sm"
                       onClick={(e) => handleAddToCart(product.id, e)}
                       className="bg-primary hover:bg-primary/90"
+                      disabled={!product.in_stock}
                     >
                       <ShoppingCart className="h-4 w-4 mr-1" />
-                      Add to Cart
+                      {product.in_stock ? 'Add to Cart' : 'Out of Stock'}
                     </Button>
                   </div>
                 </div>
