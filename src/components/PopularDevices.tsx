@@ -1,15 +1,39 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
-import { getProducts } from '../utils/productData';
+import { getProducts, Product } from '../utils/productData';
 
 const PopularDevices = () => {
   const navigate = useNavigate();
-  const products = getProducts();
-  const popularProducts = products.filter(p => p.main_tag === 'Hot' || p.main_tag === 'Featured').slice(0, 6);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const fetchedProducts = await getProducts();
+      const popularProducts = fetchedProducts.filter(p => p.main_tag === 'Hot' || p.main_tag === 'Featured').slice(0, 6);
+      setProducts(popularProducts);
+      setLoading(false);
+    };
+
+    fetchProducts();
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="py-16 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold mb-4 animate-fade-in">Popular Devices</h2>
+            <p className="text-gray-600 text-lg">Loading popular products...</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-16 bg-gray-50">
@@ -20,7 +44,7 @@ const PopularDevices = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {popularProducts.map((product, index) => (
+          {products.map((product, index) => (
             <Card
               key={product.id}
               className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-2 cursor-pointer"

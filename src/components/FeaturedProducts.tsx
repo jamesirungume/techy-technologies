@@ -1,19 +1,30 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ShoppingCart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getProducts } from '../utils/productData';
+import { getProducts, Product } from '../utils/productData';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'sonner';
 
 const FeaturedProducts = () => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const products = getProducts();
-  const featuredProducts = products.filter(p => p.main_tag === 'Featured').slice(0, 4);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const fetchedProducts = await getProducts();
+      const featuredProducts = fetchedProducts.filter(p => p.main_tag === 'Featured').slice(0, 4);
+      setProducts(featuredProducts);
+      setLoading(false);
+    };
+
+    fetchProducts();
+  }, []);
 
   const handleAddToCart = async (productId: string) => {
     try {
@@ -25,6 +36,19 @@ const FeaturedProducts = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <section className="py-16 bg-gradient-to-r from-gray-900 to-gray-800 text-white">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold mb-4">Featured Products</h2>
+            <p className="text-gray-300 text-lg">Loading featured products...</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="py-16 bg-gradient-to-r from-gray-900 to-gray-800 text-white">
       <div className="container mx-auto px-4">
@@ -34,7 +58,7 @@ const FeaturedProducts = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {featuredProducts.map((product, index) => (
+          {products.map((product, index) => (
             <Card
               key={product.id}
               className="group bg-white/10 border-white/20 hover:bg-white/20 transition-all duration-300 hover:-translate-y-2 cursor-pointer"

@@ -72,7 +72,7 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const wishlistItems: WishlistItem[] = [];
         
         for (const productId of localWishlist) {
-          const product = getProductById(productId);
+          const product = await getProductById(productId);
           if (product) {
             wishlistItems.push({
               id: `local-${product.id}`,
@@ -109,7 +109,7 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // Transform the data to include product information
       const wishlistItems: WishlistItem[] = [];
       for (const item of data || []) {
-        const product = getProductById(item.product_id);
+        const product = await getProductById(item.product_id);
         if (product) {
           wishlistItems.push({
             id: item.id,

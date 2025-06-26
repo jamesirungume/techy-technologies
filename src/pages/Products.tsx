@@ -1,17 +1,28 @@
 
-
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import ProductCard from '../components/ProductCard';
 import ProductFilters from '../components/ProductFilters';
-import { getProducts } from '../utils/productData';
+import { getProducts, Product } from '../utils/productData';
 
 const Products = () => {
   const [searchParams] = useSearchParams();
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 5000]);
-  const products = getProducts();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      const fetchedProducts = await getProducts();
+      setProducts(fetchedProducts);
+      setLoading(false);
+    };
+
+    fetchProducts();
+  }, []);
 
   const filteredProducts = useMemo(() => {
     let filtered = [...products];
@@ -48,6 +59,20 @@ const Products = () => {
   const currentCategory = searchParams.get('category');
   const currentTag = searchParams.get('tag');
   const searchQuery = searchParams.get('search');
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center py-12">
+            <p className="text-lg">Loading products...</p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -100,6 +125,3 @@ const Products = () => {
 };
 
 export default Products;
-
-
-

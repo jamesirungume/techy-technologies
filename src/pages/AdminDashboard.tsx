@@ -65,7 +65,7 @@ const AdminDashboard = () => {
         name: productForm.name.trim(),
         description: productForm.description.trim() || null,
         price: parseFloat(productForm.price),
-        image_url: productForm.image_url.trim() || null,
+        image_url: productForm.image_url.trim() || 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&h=400&fit=crop',
         category: productForm.category,
         main_tag: productForm.main_tag || null,
         promo_tag: productForm.promo_tag.trim() || null,
@@ -221,7 +221,7 @@ const AdminDashboard = () => {
                     <Label htmlFor="main_tag">Main Tag</Label>
                     <Select
                       value={productForm.main_tag}
-                      onValueChange={(value) => setProductForm({...productForm, main_tag: value})}
+                      onValueChange={(value) => setProductForm({...productForm, main_tag: value === 'none' ? '' : value})}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select main tag" />
@@ -267,7 +267,7 @@ const AdminDashboard = () => {
                   products.map((product) => (
                     <div key={product.id} className="flex items-center space-x-4 p-4 border rounded-lg">
                       <img
-                        src={product.image_url || '/placeholder.svg'}
+                        src={product.image_url || 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&h=400&fit=crop'}
                         alt={product.name}
                         className="w-16 h-16 object-cover rounded"
                       />
@@ -284,7 +284,7 @@ const AdminDashboard = () => {
                           </span>
                         )}
                         <p className="text-xs text-gray-400">
-                          {product.in_stock ? 'In Stock' : 'Out of Stock'}
+                          {product.stock_quantity > 0 ? 'In Stock' : 'Out of Stock'}
                         </p>
                       </div>
                     </div>

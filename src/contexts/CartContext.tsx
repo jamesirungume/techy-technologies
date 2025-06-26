@@ -77,7 +77,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const cartItems: CartItem[] = [];
         
         for (const productId of productIds) {
-          const product = getProductById(productId);
+          const product = await getProductById(productId);
           if (product) {
             cartItems.push({
               id: `local-${product.id}`,
@@ -115,7 +115,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Transform the data to include product information
       const cartItems: CartItem[] = [];
       for (const item of data || []) {
-        const product = getProductById(item.product_id);
+        const product = await getProductById(item.product_id);
         if (product) {
           cartItems.push({
             id: item.id,
@@ -209,7 +209,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast.success('Added to cart!');
     } catch (error) {
       console.error('Error adding to cart:', error);
-      toast.error('Failed to add to cart: ' + (error as Error).message);
+      toast.error('Failed to add to cart');
     }
   };
 
