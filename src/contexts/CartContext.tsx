@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
@@ -158,9 +157,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('Updated local cart:', newCart);
         return newCart;
       });
-      toast.success('Added to cart!');
       return;
     }
+
+    // Optimistic update - show success immediately
+    toast.success('Adding to cart...');
 
     try {
       // Check if item already exists in cart
@@ -177,35 +178,76 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (existingItem) {
-        // Update existing item
+        // Update existing item - optimistic update
+        const newQuantity = existingItem.quantity + quantity;
+        setItems(prev => prev.map(item => 
+          item.product_id === productId 
+            ? { ...item, quantity: newQuantity }
+            : item
+        ));
+
         const { error } = await supabase
           .from('cart')
-          .update({ quantity: existingItem.quantity + quantity })
+          .update({ quantity: newQuantity })
           .eq('id', existingItem.id);
 
         if (error) {
           console.error('Error updating cart item:', error);
+          // Revert optimistic update
+          setItems(prev => prev.map(item => 
+            item.product_id === productId 
+              ? { ...item, quantity: existingItem.quantity }
+              : item
+          ));
           throw error;
         }
-        console.log('Updated existing cart item');
       } else {
-        // Insert new item
-        const { error } = await supabase
+        // Insert new item - get product info first for optimistic update
+        const product = await getProductById(productId);
+        if (product) {
+          // Optimistic update
+          const newItem: CartItem = {
+            id: `temp-${Date.now()}`,
+            product_id: productId,
+            quantity,
+            product: {
+              id: product.id,
+              name: product.name,
+              price: product.price,
+              image_url: product.image_url,
+              stock_quantity: product.stock_quantity
+            }
+          };
+          setItems(prev => [...prev, newItem]);
+        }
+
+        const { data: insertedItem, error } = await supabase
           .from('cart')
           .insert([{
             user_id: user.id,
             product_id: productId,
             quantity,
-          }]);
+          }])
+          .select()
+          .single();
 
         if (error) {
           console.error('Error inserting cart item:', error);
+          // Revert optimistic update
+          setItems(prev => prev.filter(item => !item.id.startsWith('temp-')));
           throw error;
         }
-        console.log('Inserted new cart item');
+
+        // Update with real ID
+        if (insertedItem && product) {
+          setItems(prev => prev.map(item => 
+            item.id.startsWith('temp-') && item.product_id === productId
+              ? { ...item, id: insertedItem.id }
+              : item
+          ));
+        }
       }
 
-      await fetchCartItems();
       toast.success('Added to cart!');
     } catch (error) {
       console.error('Error adding to cart:', error);
@@ -228,22 +270,38 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
+    // Optimistic update
+    const oldItems = items;
+    if (quantity <= 0) {
+      setItems(prev => prev.filter(item => item.product_id !== productId));
+    } else {
+      setItems(prev => prev.map(item => 
+        item.product_id === productId ? { ...item, quantity } : item
+      ));
+    }
+
     try {
       if (quantity <= 0) {
-        await removeFromCart(productId);
-        return;
+        const { error } = await supabase
+          .from('cart')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('product_id', productId);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('cart')
+          .update({ quantity })
+          .eq('user_id', user.id)
+          .eq('product_id', productId);
+
+        if (error) throw error;
       }
-
-      const { error } = await supabase
-        .from('cart')
-        .update({ quantity })
-        .eq('user_id', user.id)
-        .eq('product_id', productId);
-
-      if (error) throw error;
-      await fetchCartItems();
     } catch (error) {
       console.error('Error updating quantity:', error);
+      // Revert optimistic update
+      setItems(oldItems);
       toast.error('Failed to update quantity');
     }
   };
@@ -257,6 +315,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
+    // Optimistic update
+    const oldItems = items;
+    setItems(prev => prev.filter(item => item.product_id !== productId));
+    toast.success('Item removed from cart');
+
     try {
       const { error } = await supabase
         .from('cart')
@@ -264,12 +327,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('user_id', user.id)
         .eq('product_id', productId);
 
-      if (error) throw error;
-      await fetchCartItems();
-      toast.success('Item removed from cart');
+      if (error) {
+        // Revert optimistic update
+        setItems(oldItems);
+        toast.error('Failed to remove item');
+        throw error;
+      }
     } catch (error) {
       console.error('Error removing from cart:', error);
-      toast.error('Failed to remove item');
     }
   };
 

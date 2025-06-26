@@ -16,6 +16,7 @@ const PhonesSection = () => {
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [processingItems, setProcessingItems] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -30,30 +31,43 @@ const PhonesSection = () => {
 
   const handleAddToCart = async (productId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (processingItems.has(`cart-${productId}`)) return;
+    
+    setProcessingItems(prev => new Set(prev).add(`cart-${productId}`));
     try {
       await addToCart(productId);
-      toast.success('Added to cart!');
     } catch (error) {
       console.error('Error adding to cart:', error);
-      toast.error('Failed to add to cart');
+    } finally {
+      setProcessingItems(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(`cart-${productId}`);
+        return newSet;
+      });
     }
   };
 
   const handleWishlist = async (productId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (processingItems.has(`wishlist-${productId}`)) return;
+    
+    setProcessingItems(prev => new Set(prev).add(`wishlist-${productId}`));
     const inWishlist = isInWishlist(productId);
     
     try {
       if (inWishlist) {
         await removeFromWishlist(productId);
-        toast.success('Removed from wishlist');
       } else {
         await addToWishlist(productId);
-        toast.success('Added to wishlist');
       }
     } catch (error) {
       console.error('Error updating wishlist:', error);
-      toast.error('Failed to update wishlist');
+    } finally {
+      setProcessingItems(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(`wishlist-${productId}`);
+        return newSet;
+      });
     }
   };
 
@@ -111,6 +125,7 @@ const PhonesSection = () => {
                       variant="ghost"
                       className={`bg-white/80 hover:bg-white h-8 w-8 ${isInWishlist(product.id) ? 'text-red-500' : 'text-gray-600'}`}
                       onClick={(e) => handleWishlist(product.id, e)}
+                      disabled={processingItems.has(`wishlist-${product.id}`)}
                     >
                       <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
                     </Button>
@@ -130,10 +145,10 @@ const PhonesSection = () => {
                       size="sm"
                       onClick={(e) => handleAddToCart(product.id, e)}
                       className="bg-primary hover:bg-primary/90"
-                      disabled={!product.in_stock}
+                      disabled={!product.in_stock || processingItems.has(`cart-${product.id}`)}
                     >
                       <ShoppingCart className="h-4 w-4 mr-1" />
-                      {product.in_stock ? 'Add to Cart' : 'Out of Stock'}
+                      {processingItems.has(`cart-${product.id}`) ? 'Adding...' : (product.in_stock ? 'Add to Cart' : 'Out of Stock')}
                     </Button>
                   </div>
                 </div>

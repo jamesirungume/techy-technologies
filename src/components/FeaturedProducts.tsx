@@ -14,6 +14,7 @@ const FeaturedProducts = () => {
   const { addToCart } = useCart();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [processingItems, setProcessingItems] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -27,12 +28,19 @@ const FeaturedProducts = () => {
   }, []);
 
   const handleAddToCart = async (productId: string) => {
+    if (processingItems.has(productId)) return;
+    
+    setProcessingItems(prev => new Set(prev).add(productId));
     try {
       await addToCart(productId);
-      toast.success('Added to cart!');
     } catch (error) {
       console.error('Error adding to cart:', error);
-      toast.error('Failed to add to cart');
+    } finally {
+      setProcessingItems(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(productId);
+        return newSet;
+      });
     }
   };
 
@@ -103,9 +111,10 @@ const FeaturedProducts = () => {
                         e.stopPropagation();
                         handleAddToCart(product.id);
                       }}
+                      disabled={processingItems.has(product.id)}
                     >
                       <ShoppingCart className="h-3 w-3 mr-1" />
-                      Add to Cart
+                      {processingItems.has(product.id) ? 'Adding...' : 'Add to Cart'}
                     </Button>
                   </div>
                 </div>

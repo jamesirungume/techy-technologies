@@ -31,6 +31,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index }) => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isTogglingWishlist, setIsTogglingWishlist] = useState(false);
 
   const getTagColor = (tag: string) => {
     switch (tag) {
@@ -49,17 +51,23 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index }) => {
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isAddingToCart) return;
+    
+    setIsAddingToCart(true);
     try {
       await addToCart(product.id);
-      toast.success('Added to cart!');
     } catch (error) {
       console.error('Error adding to cart:', error);
-      toast.error('Failed to add to cart');
+    } finally {
+      setIsAddingToCart(false);
     }
   };
 
   const handleWishlist = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isTogglingWishlist) return;
+    
+    setIsTogglingWishlist(true);
     const inWishlist = isInWishlist(product.id);
     
     try {
@@ -70,6 +78,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index }) => {
       }
     } catch (error) {
       console.error('Error updating wishlist:', error);
+    } finally {
+      setIsTogglingWishlist(false);
     }
   };
 
@@ -104,6 +114,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index }) => {
               variant="ghost"
               className={`bg-white/80 hover:bg-white h-8 w-8 ${isInWishlist(product.id) ? 'text-red-500' : 'text-gray-600'}`}
               onClick={handleWishlist}
+              disabled={isTogglingWishlist}
             >
               <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
             </Button>
@@ -156,11 +167,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index }) => {
               <Button
                 size="sm"
                 onClick={handleAddToCart}
-                disabled={!product.in_stock}
+                disabled={!product.in_stock || isAddingToCart}
                 className="bg-primary hover:bg-primary/90 w-full sm:w-auto text-xs sm:text-sm"
               >
                 <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                Add to Cart
+                {isAddingToCart ? 'Adding...' : 'Add to Cart'}
               </Button>
             </div>
           </div>

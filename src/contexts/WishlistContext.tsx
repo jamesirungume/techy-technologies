@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
@@ -147,20 +146,57 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return;
     }
 
+    // Check if already in wishlist
+    if (items.some(item => item.product_id === productId)) {
+      toast.info('Already in wishlist');
+      return;
+    }
+
+    // Optimistic update - add to UI immediately
+    const product = await getProductById(productId);
+    if (product) {
+      const newItem: WishlistItem = {
+        id: `temp-${Date.now()}`,
+        product_id: productId,
+        product: {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          image_url: product.image_url,
+          category: product.category
+        }
+      };
+      setItems(prev => [...prev, newItem]);
+      toast.success('Added to wishlist!');
+    }
+
     try {
-      const { error } = await supabase
+      const { data: insertedItem, error } = await supabase
         .from('wishlist')
         .insert({
           user_id: user.id,
           product_id: productId,
-        });
+        })
+        .select()
+        .single();
 
-      if (error && error.code !== '23505') throw error; // Ignore duplicate key error
-      await fetchWishlistItems();
-      toast.success('Added to wishlist!');
+      if (error && error.code !== '23505') {
+        // Revert optimistic update if error (except duplicate key)
+        setItems(prev => prev.filter(item => !item.id.startsWith('temp-')));
+        toast.error('Failed to add to wishlist');
+        throw error;
+      }
+
+      // Update with real ID
+      if (insertedItem && product) {
+        setItems(prev => prev.map(item => 
+          item.id.startsWith('temp-') && item.product_id === productId
+            ? { ...item, id: insertedItem.id }
+            : item
+        ));
+      }
     } catch (error) {
       console.error('Error adding to wishlist:', error);
-      toast.error('Failed to add to wishlist');
     }
   };
 
@@ -171,6 +207,11 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return;
     }
 
+    // Optimistic update - remove from UI immediately
+    const oldItems = items;
+    setItems(prev => prev.filter(item => item.product_id !== productId));
+    toast.success('Removed from wishlist');
+
     try {
       const { error } = await supabase
         .from('wishlist')
@@ -178,12 +219,14 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         .eq('user_id', user.id)
         .eq('product_id', productId);
 
-      if (error) throw error;
-      await fetchWishlistItems();
-      toast.success('Removed from wishlist');
+      if (error) {
+        // Revert optimistic update
+        setItems(oldItems);
+        toast.error('Failed to remove from wishlist');
+        throw error;
+      }
     } catch (error) {
       console.error('Error removing from wishlist:', error);
-      toast.error('Failed to remove from wishlist');
     }
   };
 
