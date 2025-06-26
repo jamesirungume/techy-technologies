@@ -1,19 +1,30 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ShoppingCart, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getProducts } from '../utils/productData';
+import { getProducts, Product } from '../utils/productData';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'sonner';
 
 const PhonesSection = () => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const products = getProducts();
-  const phoneProducts = products.filter(p => p.category === 'Phones').slice(0, 6);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const fetchedProducts = await getProducts();
+      const phoneProducts = fetchedProducts.filter(p => p.category === 'Phones').slice(0, 6);
+      setProducts(phoneProducts);
+      setLoading(false);
+    };
+
+    fetchProducts();
+  }, []);
 
   const handleAddToCart = async (productId: string) => {
     try {
@@ -25,6 +36,19 @@ const PhonesSection = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <section className="py-16 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold mb-4">Latest Smartphones</h2>
+            <p className="text-gray-600 text-lg">Loading smartphones...</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="py-16 bg-white">
       <div className="container mx-auto px-4">
@@ -34,7 +58,7 @@ const PhonesSection = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {phoneProducts.map((product, index) => (
+          {products.map((product, index) => (
             <Card
               key={product.id}
               className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-2 cursor-pointer"
