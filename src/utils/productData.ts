@@ -16,6 +16,7 @@ export interface Product {
 
 export const getProducts = async (): Promise<Product[]> => {
   try {
+    console.log('Fetching all products from Supabase...');
     const { data, error } = await supabase
       .from('products')
       .select('*')
@@ -26,20 +27,27 @@ export const getProducts = async (): Promise<Product[]> => {
       return [];
     }
 
-    console.log('Fetched products from Supabase:', data);
+    console.log('Raw products data from Supabase:', data);
+    console.log('Total products fetched:', data?.length || 0);
 
-    return (data || []).map(product => ({
-      id: product.id.toString(), // Ensure ID is always a string
-      name: product.name,
-      description: product.description || '',
-      price: parseFloat(product.price.toString()),
-      image_url: product.image_url || 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&h=400&fit=crop',
-      category: product.category,
-      main_tag: product.main_tag || undefined,
-      promo_tag: product.promo_tag || undefined,
-      in_stock: product.stock_quantity > 0,
-      stock_quantity: product.stock_quantity
-    }));
+    const processedProducts = (data || []).map(product => {
+      console.log('Processing product:', product.name, 'ID:', product.id);
+      return {
+        id: product.id.toString(),
+        name: product.name,
+        description: product.description || '',
+        price: parseFloat(product.price.toString()),
+        image_url: product.image_url || 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&h=400&fit=crop',
+        category: product.category,
+        main_tag: product.main_tag || undefined,
+        promo_tag: product.promo_tag || undefined,
+        in_stock: product.stock_quantity > 0,
+        stock_quantity: product.stock_quantity
+      };
+    });
+
+    console.log('Processed products:', processedProducts);
+    return processedProducts;
   } catch (error) {
     console.error('Error fetching products:', error);
     return [];

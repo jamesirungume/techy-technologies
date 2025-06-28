@@ -15,13 +15,30 @@ const Products = () => {
 
   useEffect(() => {
     const fetchProducts = async () => {
+      console.log('Products page: Starting to fetch products...');
       setLoading(true);
       const fetchedProducts = await getProducts();
+      console.log('Products page: Fetched products:', fetchedProducts.length);
       setProducts(fetchedProducts);
       setLoading(false);
     };
 
     fetchProducts();
+  }, []);
+
+  // Force refresh when user navigates back to the page
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('Page focused, refreshing products...');
+      const fetchProducts = async () => {
+        const fetchedProducts = await getProducts();
+        setProducts(fetchedProducts);
+      };
+      fetchProducts();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
   const filteredProducts = useMemo(() => {
@@ -103,6 +120,9 @@ const Products = () => {
             {filteredProducts.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-gray-500 text-lg">No products found matching your criteria.</p>
+                <p className="text-sm text-gray-400 mt-2">
+                  Total products in database: {products.length}
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

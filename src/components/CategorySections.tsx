@@ -1,22 +1,9 @@
 
 import React, { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { getProducts, Product } from '../utils/productData';
 import ProductCard from './ProductCard';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  image_url: string;
-  category: string;
-  main_tag: string;
-  promo_tag: string;
-  in_stock: boolean;
-  stock_quantity: number;
-}
 
 const CategorySection: React.FC<{ category: string; title: string }> = ({ category, title }) => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -26,14 +13,12 @@ const CategorySection: React.FC<{ category: string; title: string }> = ({ catego
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const { data, error } = await supabase
-          .from('products')
-          .select('*')
-          .eq('category', category)
-          .limit(4);
-
-        if (error) throw error;
-        setProducts(data || []);
+        console.log(`CategorySection (${category}): Fetching products...`);
+        const fetchedProducts = await getProducts();
+        console.log(`CategorySection (${category}): All products:`, fetchedProducts.length);
+        const categoryProducts = fetchedProducts.filter(product => product.category === category).slice(0, 4);
+        console.log(`CategorySection (${category}): Category products found:`, categoryProducts.length);
+        setProducts(categoryProducts);
       } catch (error) {
         console.error(`Error fetching ${category} products:`, error);
       } finally {
@@ -77,11 +62,17 @@ const CategorySection: React.FC<{ category: string; title: string }> = ({ catego
             View All {category}
           </Button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {products.map((product, index) => (
-            <ProductCard key={product.id} product={product} index={index} />
-          ))}
-        </div>
+        {products.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-gray-500">No {category.toLowerCase()} products found.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {products.map((product, index) => (
+              <ProductCard key={product.id} product={product} index={index} />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
