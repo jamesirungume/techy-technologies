@@ -24,32 +24,48 @@ export const getProducts = async (): Promise<Product[]> => {
 
     if (error) {
       console.error('Error fetching products:', error);
-      return [];
+      throw error;
     }
 
     console.log('Raw products data from Supabase:', data);
     console.log('Total products fetched:', data?.length || 0);
 
-    const processedProducts = (data || []).map(product => {
-      console.log('Processing product:', product.name, 'ID:', product.id);
+    if (!data || data.length === 0) {
+      console.warn('No products found in database');
+      return [];
+    }
+
+    const processedProducts = data.map(product => {
+      console.log('Processing product:', product.name, 'ID:', product.id, 'Price:', product.price);
+      
+      // Ensure price is a valid number
+      const price = typeof product.price === 'string' ? 
+        parseFloat(product.price) : 
+        Number(product.price);
+      
+      if (isNaN(price)) {
+        console.warn(`Invalid price for product ${product.name}:`, product.price);
+      }
+
       return {
-        id: product.id.toString(),
-        name: product.name,
+        id: String(product.id),
+        name: product.name || 'Unnamed Product',
         description: product.description || '',
-        price: parseFloat(product.price.toString()),
+        price: isNaN(price) ? 0 : price,
         image_url: product.image_url || 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&h=400&fit=crop',
-        category: product.category,
+        category: product.category || 'Uncategorized',
         main_tag: product.main_tag || undefined,
         promo_tag: product.promo_tag || undefined,
-        in_stock: product.stock_quantity > 0,
-        stock_quantity: product.stock_quantity
+        in_stock: Boolean(product.stock_quantity > 0),
+        stock_quantity: Number(product.stock_quantity) || 0
       };
     });
 
-    console.log('Processed products:', processedProducts);
+    console.log('Processed products:', processedProducts.length, 'products');
+    console.log('Sample processed product:', processedProducts[0]);
     return processedProducts;
   } catch (error) {
-    console.error('Error fetching products:', error);
+    console.error('Error in getProducts:', error);
     return [];
   }
 };

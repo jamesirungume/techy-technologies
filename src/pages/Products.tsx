@@ -9,7 +9,7 @@ import { getProducts, Product } from '../utils/productData';
 
 const Products = () => {
   const [searchParams] = useSearchParams();
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 5000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 10000]); // Increased max range
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -17,10 +17,17 @@ const Products = () => {
     const fetchProducts = async () => {
       console.log('Products page: Starting to fetch products...');
       setLoading(true);
-      const fetchedProducts = await getProducts();
-      console.log('Products page: Fetched products:', fetchedProducts.length);
-      setProducts(fetchedProducts);
-      setLoading(false);
+      try {
+        const fetchedProducts = await getProducts();
+        console.log('Products page: Fetched products:', fetchedProducts.length);
+        console.log('Products data:', fetchedProducts);
+        setProducts(fetchedProducts);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchProducts();
@@ -31,8 +38,12 @@ const Products = () => {
     const handleFocus = () => {
       console.log('Page focused, refreshing products...');
       const fetchProducts = async () => {
-        const fetchedProducts = await getProducts();
-        setProducts(fetchedProducts);
+        try {
+          const fetchedProducts = await getProducts();
+          setProducts(fetchedProducts);
+        } catch (error) {
+          console.error('Error refreshing products:', error);
+        }
       };
       fetchProducts();
     };
@@ -46,30 +57,38 @@ const Products = () => {
 
     // Search filter
     const searchQuery = searchParams.get('search');
-    if (searchQuery) {
+    if (searchQuery && searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
       filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchQuery.toLowerCase())
+        product.name.toLowerCase().includes(query) ||
+        product.description.toLowerCase().includes(query) ||
+        product.category.toLowerCase().includes(query)
       );
     }
 
     // Category filter
     const category = searchParams.get('category');
-    if (category) {
-      filtered = filtered.filter(product => product.category === category);
+    if (category && category.trim()) {
+      filtered = filtered.filter(product => 
+        product.category.toLowerCase() === category.toLowerCase()
+      );
     }
 
     // Tag filter
     const tag = searchParams.get('tag');
-    if (tag) {
-      filtered = filtered.filter(product => product.main_tag === tag);
+    if (tag && tag.trim()) {
+      filtered = filtered.filter(product => 
+        product.main_tag && product.main_tag.toLowerCase() === tag.toLowerCase()
+      );
     }
 
-    // Price filter
-    filtered = filtered.filter(product => 
-      product.price >= priceRange[0] && product.price <= priceRange[1]
-    );
+    // Price filter - only apply if products have valid prices
+    filtered = filtered.filter(product => {
+      const price = Number(product.price);
+      return !isNaN(price) && price >= priceRange[0] && price <= priceRange[1];
+    });
 
+    console.log('Filtered products:', filtered.length, 'from total:', products.length);
     return filtered;
   }, [products, searchParams, priceRange]);
 
@@ -105,6 +124,7 @@ const Products = () => {
           </h1>
           <p className="text-gray-600">
             {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''} found
+            {products.length > 0 && ` (${products.length} total products in database)`}
           </p>
         </div>
 
@@ -123,6 +143,11 @@ const Products = () => {
                 <p className="text-sm text-gray-400 mt-2">
                   Total products in database: {products.length}
                 </p>
+                {products.length === 0 && (
+                  <p className="text-sm text-red-500 mt-2">
+                    No products found in database. Please check your Supabase connection.
+                  </p>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
