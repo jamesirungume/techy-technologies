@@ -40,7 +40,6 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [localWishlist, setLocalWishlist] = useState<string[]>([]);
   const { user } = useAuth();
 
-  // Load wishlist from localStorage on mount
   useEffect(() => {
     const savedWishlist = localStorage.getItem('techy-wishlist');
     if (savedWishlist) {
@@ -53,14 +52,12 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, []);
 
-  // Save wishlist to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('techy-wishlist', JSON.stringify(localWishlist));
   }, [localWishlist]);
 
   const fetchWishlistItems = async () => {
     if (!user) {
-      // Convert local wishlist to items format
       if (localWishlist.length === 0) {
         setItems([]);
         return;
@@ -105,7 +102,6 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (error) throw error;
       
-      // Transform the data to include product information
       const wishlistItems: WishlistItem[] = [];
       for (const item of data || []) {
         const product = await getProductById(item.product_id);
@@ -138,7 +134,6 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const addToWishlist = async (productId: string) => {
     if (!user) {
-      // Add to local wishlist
       if (!localWishlist.includes(productId)) {
         setLocalWishlist(prev => [...prev, productId]);
         toast.success('Added to wishlist!');
@@ -146,13 +141,11 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return;
     }
 
-    // Check if already in wishlist
     if (items.some(item => item.product_id === productId)) {
       toast.info('Already in wishlist');
       return;
     }
 
-    // Optimistic update - add to UI immediately
     const product = await getProductById(productId);
     if (product) {
       const newItem: WishlistItem = {
@@ -181,13 +174,11 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         .single();
 
       if (error && error.code !== '23505') {
-        // Revert optimistic update if error (except duplicate key)
         setItems(prev => prev.filter(item => !item.id.startsWith('temp-')));
         toast.error('Failed to add to wishlist');
         throw error;
       }
 
-      // Update with real ID
       if (insertedItem && product) {
         setItems(prev => prev.map(item => 
           item.id.startsWith('temp-') && item.product_id === productId
@@ -207,7 +198,6 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return;
     }
 
-    // Optimistic update - remove from UI immediately
     const oldItems = items;
     setItems(prev => prev.filter(item => item.product_id !== productId));
     toast.success('Removed from wishlist');
@@ -220,7 +210,6 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         .eq('product_id', productId);
 
       if (error) {
-        // Revert optimistic update
         setItems(oldItems);
         toast.error('Failed to remove from wishlist');
         throw error;

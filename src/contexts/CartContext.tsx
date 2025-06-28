@@ -44,7 +44,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [localCart, setLocalCart] = useState<{ [key: string]: number }>({});
   const { user } = useAuth();
 
-  // Load cart from localStorage on mount
   useEffect(() => {
     const savedCart = localStorage.getItem('techy-cart');
     if (savedCart) {
@@ -57,14 +56,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // Save cart to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('techy-cart', JSON.stringify(localCart));
   }, [localCart]);
 
   const fetchCartItems = async () => {
     if (!user) {
-      // Convert local cart to items format
       const productIds = Object.keys(localCart);
       if (productIds.length === 0) {
         setItems([]);
@@ -111,7 +108,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) throw error;
       
-      // Transform the data to include product information
       const cartItems: CartItem[] = [];
       for (const item of data || []) {
         const product = await getProductById(item.product_id);
@@ -148,7 +144,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('Adding to cart:', productId, quantity, 'User:', user?.id);
     
     if (!user) {
-      // Add to local cart
       setLocalCart(prev => {
         const newCart = {
           ...prev,
@@ -157,14 +152,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('Updated local cart:', newCart);
         return newCart;
       });
+      toast.success('Added to cart!');
       return;
     }
 
-    // Optimistic update - show success immediately
     toast.success('Adding to cart...');
 
     try {
-      // Check if item already exists in cart
       const { data: existingItem, error: fetchError } = await supabase
         .from('cart')
         .select('*')
@@ -178,7 +172,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (existingItem) {
-        // Update existing item - optimistic update
         const newQuantity = existingItem.quantity + quantity;
         setItems(prev => prev.map(item => 
           item.product_id === productId 
@@ -193,7 +186,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (error) {
           console.error('Error updating cart item:', error);
-          // Revert optimistic update
           setItems(prev => prev.map(item => 
             item.product_id === productId 
               ? { ...item, quantity: existingItem.quantity }
@@ -202,10 +194,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           throw error;
         }
       } else {
-        // Insert new item - get product info first for optimistic update
         const product = await getProductById(productId);
         if (product) {
-          // Optimistic update
           const newItem: CartItem = {
             id: `temp-${Date.now()}`,
             product_id: productId,
@@ -233,12 +223,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (error) {
           console.error('Error inserting cart item:', error);
-          // Revert optimistic update
           setItems(prev => prev.filter(item => !item.id.startsWith('temp-')));
           throw error;
         }
 
-        // Update with real ID
         if (insertedItem && product) {
           setItems(prev => prev.map(item => 
             item.id.startsWith('temp-') && item.product_id === productId
@@ -270,7 +258,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    // Optimistic update
     const oldItems = items;
     if (quantity <= 0) {
       setItems(prev => prev.filter(item => item.product_id !== productId));
@@ -300,7 +287,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('Error updating quantity:', error);
-      // Revert optimistic update
       setItems(oldItems);
       toast.error('Failed to update quantity');
     }
@@ -315,7 +301,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    // Optimistic update
     const oldItems = items;
     setItems(prev => prev.filter(item => item.product_id !== productId));
     toast.success('Item removed from cart');
@@ -328,7 +313,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('product_id', productId);
 
       if (error) {
-        // Revert optimistic update
         setItems(oldItems);
         toast.error('Failed to remove item');
         throw error;

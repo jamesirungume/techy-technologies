@@ -117,15 +117,30 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Mobile menu button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </Button>
+          {/* Mobile Actions - Cart always visible */}
+          <div className="md:hidden flex items-center space-x-2">
+            <Button
+              variant="ghost"
+              className="relative"
+              onClick={() => navigate('/cart')}
+            >
+              <ShoppingCart className="h-5 w-5" />
+              {cartItemCount > 0 && (
+                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                  {cartItemCount}
+                </Badge>
+              )}
+            </Button>
+            
+            {/* Mobile menu button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
+              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </Button>
+          </div>
         </div>
 
         {/* Second Row - Category Navigation */}
@@ -229,15 +244,6 @@ const Navbar = () => {
               >
                 <Heart className="h-5 w-5 mr-2" />
                 Wishlist {wishlistItemCount > 0 && `(${wishlistItemCount})`}
-              </Button>
-              
-              <Button
-                variant="ghost"
-                className="justify-start relative"
-                onClick={() => {navigate('/cart'); setIsMenuOpen(false);}}
-              >
-                <ShoppingCart className="h-5 w-5 mr-2" />
-                Cart {cartItemCount > 0 && `(${cartItemCount})`}
               </Button>
               
               <Button
