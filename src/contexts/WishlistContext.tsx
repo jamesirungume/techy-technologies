@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
@@ -84,9 +85,10 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }
         }
 
+        console.log('Local wishlist items:', wishlistItems);
         setItems(wishlistItems);
       } catch (error) {
-        console.error('Error fetching products:', error);
+        console.error('Error fetching local wishlist products:', error);
       } finally {
         setLoading(false);
       }
@@ -101,6 +103,8 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         .eq('user_id', user.id);
 
       if (error) throw error;
+      
+      console.log('Wishlist data from Supabase:', data);
       
       const wishlistItems: WishlistItem[] = [];
       for (const item of data || []) {
@@ -117,9 +121,12 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               category: product.category
             }
           });
+        } else {
+          console.warn('Product not found for wishlist item:', item.product_id);
         }
       }
       
+      console.log('Processed wishlist items:', wishlistItems);
       setItems(wishlistItems);
     } catch (error) {
       console.error('Error fetching wishlist:', error);
@@ -133,6 +140,8 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [user, localWishlist]);
 
   const addToWishlist = async (productId: string) => {
+    console.log('Adding to wishlist:', productId);
+    
     if (!user) {
       if (!localWishlist.includes(productId)) {
         setLocalWishlist(prev => [...prev, productId]);
@@ -192,6 +201,8 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const removeFromWishlist = async (productId: string) => {
+    console.log('Removing from wishlist:', productId);
+    
     if (!user) {
       setLocalWishlist(prev => prev.filter(id => id !== productId));
       toast.success('Removed from wishlist');

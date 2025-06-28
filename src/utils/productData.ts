@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface Product {
@@ -25,8 +26,10 @@ export const getProducts = async (): Promise<Product[]> => {
       return [];
     }
 
+    console.log('Fetched products from Supabase:', data);
+
     return (data || []).map(product => ({
-      id: product.id,
+      id: product.id.toString(), // Ensure ID is always a string
       name: product.name,
       description: product.description || '',
       price: parseFloat(product.price.toString()),
@@ -45,11 +48,27 @@ export const getProducts = async (): Promise<Product[]> => {
 
 export const getProductById = async (id: string): Promise<Product | null> => {
   try {
-    const { data, error } = await supabase
+    console.log('Fetching product with ID:', id);
+    
+    // Try to fetch the product with the ID as-is first
+    let { data, error } = await supabase
       .from('products')
       .select('*')
       .eq('id', id)
       .maybeSingle();
+
+    // If that fails and the ID looks like a number, try converting it
+    if (error && /invalid input syntax for type uuid/.test(error.message)) {
+      console.log('UUID format failed, trying with string ID conversion');
+      const result = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', id.toString())
+        .maybeSingle();
+      
+      data = result.data;
+      error = result.error;
+    }
 
     if (error || !data) {
       console.error('Error fetching product:', error);
@@ -57,7 +76,7 @@ export const getProductById = async (id: string): Promise<Product | null> => {
     }
 
     return {
-      id: data.id,
+      id: data.id.toString(),
       name: data.name,
       description: data.description || '',
       price: parseFloat(data.price.toString()),
