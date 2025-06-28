@@ -23,35 +23,33 @@ export const getProducts = async (): Promise<Product[]> => {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching products:', error);
+      console.error('Supabase error fetching products:', error);
       throw error;
     }
 
     console.log('Raw products data from Supabase:', data);
-    console.log('Total products fetched:', data?.length || 0);
+    console.log('Total products fetched from database:', data?.length || 0);
 
     if (!data || data.length === 0) {
       console.warn('No products found in database');
       return [];
     }
 
-    const processedProducts = data.map(product => {
-      console.log('Processing product:', product.name, 'ID:', product.id, 'Price:', product.price);
+    const processedProducts = data.map((product, index) => {
+      console.log(`Processing product ${index + 1}:`, {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        category: product.category,
+        stock_quantity: product.stock_quantity
+      });
       
-      // Ensure price is a valid number
-      const price = typeof product.price === 'string' ? 
-        parseFloat(product.price) : 
-        Number(product.price);
-      
-      if (isNaN(price)) {
-        console.warn(`Invalid price for product ${product.name}:`, product.price);
-      }
-
-      return {
+      // Ensure all fields are properly processed
+      const processedProduct = {
         id: String(product.id),
         name: product.name || 'Unnamed Product',
         description: product.description || '',
-        price: isNaN(price) ? 0 : price,
+        price: Number(product.price) || 0,
         image_url: product.image_url || 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&h=400&fit=crop',
         category: product.category || 'Uncategorized',
         main_tag: product.main_tag || undefined,
@@ -59,13 +57,16 @@ export const getProducts = async (): Promise<Product[]> => {
         in_stock: Boolean(product.stock_quantity > 0),
         stock_quantity: Number(product.stock_quantity) || 0
       };
+
+      console.log(`Processed product ${index + 1}:`, processedProduct);
+      return processedProduct;
     });
 
-    console.log('Processed products:', processedProducts.length, 'products');
-    console.log('Sample processed product:', processedProducts[0]);
+    console.log('Final processed products count:', processedProducts.length);
+    console.log('All processed products:', processedProducts);
     return processedProducts;
   } catch (error) {
-    console.error('Error in getProducts:', error);
+    console.error('Error in getProducts function:', error);
     return [];
   }
 };

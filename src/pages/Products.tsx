@@ -9,27 +9,33 @@ import { getProducts, Product } from '../utils/productData';
 
 const Products = () => {
   const [searchParams] = useSearchParams();
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 10000]); // Increased max range
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 10000]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchProducts = async () => {
+    console.log('Products page: Starting to fetch products...');
+    setLoading(true);
+    setError(null);
+    try {
+      const fetchedProducts = await getProducts();
+      console.log('Products page: Successfully fetched products:', fetchedProducts.length);
+      setProducts(fetchedProducts);
+      
+      if (fetchedProducts.length === 0) {
+        setError('No products found in the database');
+      }
+    } catch (error) {
+      console.error('Products page: Error fetching products:', error);
+      setError('Failed to load products. Please try again.');
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      console.log('Products page: Starting to fetch products...');
-      setLoading(true);
-      try {
-        const fetchedProducts = await getProducts();
-        console.log('Products page: Fetched products:', fetchedProducts.length);
-        console.log('Products data:', fetchedProducts);
-        setProducts(fetchedProducts);
-      } catch (error) {
-        console.error('Error fetching products:', error);
-        setProducts([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchProducts();
   }, []);
 
@@ -37,14 +43,6 @@ const Products = () => {
   useEffect(() => {
     const handleFocus = () => {
       console.log('Page focused, refreshing products...');
-      const fetchProducts = async () => {
-        try {
-          const fetchedProducts = await getProducts();
-          setProducts(fetchedProducts);
-        } catch (error) {
-          console.error('Error refreshing products:', error);
-        }
-      };
       fetchProducts();
     };
 
@@ -53,7 +51,10 @@ const Products = () => {
   }, []);
 
   const filteredProducts = useMemo(() => {
+    if (products.length === 0) return [];
+    
     let filtered = [...products];
+    console.log('Starting filtration with products:', filtered.length);
 
     // Search filter
     const searchQuery = searchParams.get('search');
@@ -64,6 +65,7 @@ const Products = () => {
         product.description.toLowerCase().includes(query) ||
         product.category.toLowerCase().includes(query)
       );
+      console.log('After search filter:', filtered.length);
     }
 
     // Category filter
@@ -72,6 +74,7 @@ const Products = () => {
       filtered = filtered.filter(product => 
         product.category.toLowerCase() === category.toLowerCase()
       );
+      console.log('After category filter:', filtered.length);
     }
 
     // Tag filter
@@ -80,15 +83,18 @@ const Products = () => {
       filtered = filtered.filter(product => 
         product.main_tag && product.main_tag.toLowerCase() === tag.toLowerCase()
       );
+      console.log('After tag filter:', filtered.length);
     }
 
-    // Price filter - only apply if products have valid prices
+    // Price filter
     filtered = filtered.filter(product => {
       const price = Number(product.price);
-      return !isNaN(price) && price >= priceRange[0] && price <= priceRange[1];
+      const inRange = !isNaN(price) && price >= priceRange[0] && price <= priceRange[1];
+      return inRange;
     });
+    console.log('After price filter:', filtered.length);
 
-    console.log('Filtered products:', filtered.length, 'from total:', products.length);
+    console.log('Final filtered products:', filtered.length);
     return filtered;
   }, [products, searchParams, priceRange]);
 
@@ -110,6 +116,26 @@ const Products = () => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center py-12">
+            <p className="text-lg text-red-500">{error}</p>
+            <button 
+              onClick={fetchProducts}
+              className="mt-4 px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -123,9 +149,13 @@ const Products = () => {
              'All Products'}
           </h1>
           <p className="text-gray-600">
-            {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''} found
-            {products.length > 0 && ` (${products.length} total products in database)`}
+            Showing {filteredProducts.length} of {products.length} products
           </p>
+          {products.length > 0 && (
+            <p className="text-sm text-gray-500">
+              Total products in database: {products.length}
+            </p>
+          )}
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">
@@ -139,13 +169,15 @@ const Products = () => {
           <div className="lg:w-3/4">
             {filteredProducts.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-gray-500 text-lg">No products found matching your criteria.</p>
-                <p className="text-sm text-gray-400 mt-2">
-                  Total products in database: {products.length}
+                <p className="text-gray-500 text-lg">
+                  {products.length === 0 
+                    ? 'No products available in the database.' 
+                    : 'No products found matching your criteria.'
+                  }
                 </p>
                 {products.length === 0 && (
                   <p className="text-sm text-red-500 mt-2">
-                    No products found in database. Please check your Supabase connection.
+                    Please check your Supabase connection and ensure products are added to the database.
                   </p>
                 )}
               </div>
