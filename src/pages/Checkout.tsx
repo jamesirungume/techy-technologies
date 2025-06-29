@@ -108,6 +108,8 @@ const Checkout = () => {
     try {
       const callbackUrl = `${window.location.origin}/order-success`;
       
+      console.log("Initiating Pesapal payment...");
+      
       const { data, error } = await supabase.functions.invoke('process-pesapal-payment', {
         body: {
           name: shippingInfo.fullName,
@@ -120,82 +122,56 @@ const Checkout = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase function invocation error:", error);
+        throw error;
+      }
+
+      console.log("Pesapal response:", data);
 
       if (data.success) {
-        // Open Pesapal payment iframe
-        const iframe = document.createElement('iframe');
-        iframe.src = data.iframe_url;
-        iframe.style.width = '100%';
-        iframe.style.height = '600px';
-        iframe.style.border = 'none';
-        
-        // Create modal overlay
-        const overlay = document.createElement('div');
-        overlay.style.cssText = `
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: rgba(0,0,0,0.8);
-          z-index: 10000;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 20px;
-        `;
-        
-        const container = document.createElement('div');
-        container.style.cssText = `
-          background: white;
-          border-radius: 8px;
-          width: 100%;
-          max-width: 800px;
-          height: 80vh;
-          position: relative;
-        `;
-        
-        const closeButton = document.createElement('button');
-        closeButton.innerHTML = '×';
-        closeButton.style.cssText = `
-          position: absolute;
-          top: 10px;
-          right: 15px;
-          background: none;
-          border: none;
-          font-size: 24px;
-          cursor: pointer;
-          z-index: 1;
-        `;
-        closeButton.onclick = () => document.body.removeChild(overlay);
-        
-        container.appendChild(closeButton);
-        container.appendChild(iframe);
-        overlay.appendChild(container);
-        document.body.appendChild(overlay);
-        
-        // Listen for payment completion (you might need to adjust this based on Pesapal's callback mechanism)
-        const checkPaymentStatus = setInterval(async () => {
-          try {
-            // You would typically check the payment status here
-            // For now, we'll simulate payment completion after 30 seconds for demo
-            // In production, you'd have a proper callback mechanism
-          } catch (error) {
-            console.error('Error checking payment status:', error);
-          }
-        }, 5000);
-        
         // Save order tracking info
         localStorage.setItem('pesapal_order_id', data.order_tracking_id);
         
-        toast.success('Pesapal payment window opened. Complete your payment to proceed.');
+        // Use the redirect URL or iframe URL provided by Pesapal
+        const paymentUrl = data.iframe_url || data.redirect_url;
+        
+        if (paymentUrl) {
+          // Open payment in a new window
+          const paymentWindow = window.open(
+            paymentUrl,
+            'pesapal_payment',
+            'width=800,height=600,scrollbars=yes,resizable=yes'
+          );
+          
+          if (paymentWindow) {
+            // Monitor the payment window
+            const checkClosed = setInterval(() => {
+              if (paymentWindow.closed) {
+                clearInterval(checkClosed);
+                // Check payment status after window closes
+                toast.info('Payment window closed. Checking payment status...');
+                // You might want to verify payment status here
+                setTimeout(() => {
+                  navigate('/order-success');
+                }, 2000);
+              }
+            }, 1000);
+            
+            toast.success('Pesapal payment window opened. Complete your payment to proceed.');
+          } else {
+            // Fallback: redirect current window
+            window.location.href = paymentUrl;
+          }
+        } else {
+          throw new Error('No payment URL received from Pesapal');
+        }
       } else {
         throw new Error(data.error || 'Failed to initialize Pesapal payment');
       }
     } catch (error) {
       console.error('Pesapal payment error:', error);
-      toast.error('Failed to initialize Pesapal payment. Please try again.');
+      toast.error(`Failed to initialize Pesapal payment: ${error.message || 'Please try again.'}`);
     }
   };
 
