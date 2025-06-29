@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -299,7 +300,7 @@ const Checkout = () => {
                   </div>
                   
                   <div>
-                    <Label htmlFor="phone">Phone Number *</Label>
+                    <Label htmlFor="phone">Phone Number for Verification Call *</Label>
                     <Input
                       id="phone"
                       name="phone"
@@ -342,7 +343,7 @@ const Checkout = () => {
                         <strong>Cash on Delivery</strong>
                       </p>
                       <p className="text-yellow-700 text-sm mt-1">
-                        Pay cash when your order is delivered. Our team will contact you to confirm your order.
+                        Pay cash when your order is delivered. Our team will contact you for verification and to confirm your order.
                       </p>
                     </div>
                   )}

@@ -57,7 +57,7 @@ const handler = async (req: Request): Promise<Response> => {
       : `New Paid Order #${orderId}`;
 
     const message = isCOD 
-      ? `Call this number to confirm COD order: ${customerInfo.phone}`
+      ? `Call this number for verification: ${customerInfo.phone}`
       : `Payment has been completed successfully.`;
 
     const emailHtml = `

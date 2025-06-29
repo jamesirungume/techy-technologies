@@ -6,8 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const PESAPAL_CONSUMER_KEY = "NMjAcA377rp5LBxdJNX1Sd5WDqa8mtWq";
-const PESAPAL_CONSUMER_SECRET = "ZjkW1CTfrYBGiyW/pduJX/T+iPQ=";
+const PESAPAL_CONSUMER_KEY = Deno.env.get("PESAPAL_CONSUMER_KEY");
+const PESAPAL_CONSUMER_SECRET = Deno.env.get("PESAPAL_CONSUMER_SECRET");
 const PESAPAL_BASE_URL = "https://cybqa.pesapal.com/pesapalv3"; // Sandbox URL
 
 interface PaymentRequest {
@@ -23,6 +23,10 @@ interface PaymentRequest {
 const getAccessToken = async () => {
   console.log("Requesting OAuth token from Pesapal...");
   
+  if (!PESAPAL_CONSUMER_KEY || !PESAPAL_CONSUMER_SECRET) {
+    throw new Error("Missing Pesapal credentials in environment variables");
+  }
+
   try {
     const authResponse = await fetch(`${PESAPAL_BASE_URL}/api/Auth/RequestToken`, {
       method: "POST",
@@ -49,6 +53,10 @@ const getAccessToken = async () => {
       authData = JSON.parse(responseText);
     } catch (e) {
       throw new Error(`Invalid auth response format: ${responseText}`);
+    }
+    
+    if (authData.error) {
+      throw new Error(`Pesapal auth error: ${authData.error.message || authData.error.code}`);
     }
     
     if (!authData.token) {
