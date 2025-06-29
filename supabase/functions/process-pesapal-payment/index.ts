@@ -8,7 +8,8 @@ const corsHeaders = {
 
 const PESAPAL_CONSUMER_KEY = Deno.env.get("PESAPAL_CONSUMER_KEY");
 const PESAPAL_CONSUMER_SECRET = Deno.env.get("PESAPAL_CONSUMER_SECRET");
-const PESAPAL_BASE_URL = "https://cybqa.pesapal.com/pesapalv3"; // Sandbox URL
+const PESAPAL_BASE_URL = "https://cybqa.pesapal.com";
+
 
 interface PaymentRequest {
   name: string;
