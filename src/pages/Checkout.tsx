@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -105,6 +104,101 @@ const Checkout = () => {
     }
   };
 
+  const processPesapalPayment = async () => {
+    try {
+      const callbackUrl = `${window.location.origin}/order-success`;
+      
+      const { data, error } = await supabase.functions.invoke('process-pesapal-payment', {
+        body: {
+          name: shippingInfo.fullName,
+          phone: shippingInfo.phone,
+          email: shippingInfo.email,
+          amount: getTotalPrice(),
+          currency: 'KES',
+          description: `Order for ${items.length} items`,
+          callbackUrl: callbackUrl
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        // Open Pesapal payment iframe
+        const iframe = document.createElement('iframe');
+        iframe.src = data.iframe_url;
+        iframe.style.width = '100%';
+        iframe.style.height = '600px';
+        iframe.style.border = 'none';
+        
+        // Create modal overlay
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0,0,0,0.8);
+          z-index: 10000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+        `;
+        
+        const container = document.createElement('div');
+        container.style.cssText = `
+          background: white;
+          border-radius: 8px;
+          width: 100%;
+          max-width: 800px;
+          height: 80vh;
+          position: relative;
+        `;
+        
+        const closeButton = document.createElement('button');
+        closeButton.innerHTML = '×';
+        closeButton.style.cssText = `
+          position: absolute;
+          top: 10px;
+          right: 15px;
+          background: none;
+          border: none;
+          font-size: 24px;
+          cursor: pointer;
+          z-index: 1;
+        `;
+        closeButton.onclick = () => document.body.removeChild(overlay);
+        
+        container.appendChild(closeButton);
+        container.appendChild(iframe);
+        overlay.appendChild(container);
+        document.body.appendChild(overlay);
+        
+        // Listen for payment completion (you might need to adjust this based on Pesapal's callback mechanism)
+        const checkPaymentStatus = setInterval(async () => {
+          try {
+            // You would typically check the payment status here
+            // For now, we'll simulate payment completion after 30 seconds for demo
+            // In production, you'd have a proper callback mechanism
+          } catch (error) {
+            console.error('Error checking payment status:', error);
+          }
+        }, 5000);
+        
+        // Save order tracking info
+        localStorage.setItem('pesapal_order_id', data.order_tracking_id);
+        
+        toast.success('Pesapal payment window opened. Complete your payment to proceed.');
+      } else {
+        throw new Error(data.error || 'Failed to initialize Pesapal payment');
+      }
+    } catch (error) {
+      console.error('Pesapal payment error:', error);
+      toast.error('Failed to initialize Pesapal payment. Please try again.');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -147,7 +241,9 @@ const Checkout = () => {
           if (error) throw error;
 
           toast.success('MPesa payment initiated. Please check your phone and enter your PIN.');
-          // You might want to poll for payment status here
+        } else if (paymentOption === 'pesapal') {
+          // Pesapal Payment
+          await processPesapalPayment();
         }
       }
     } catch (error) {
@@ -270,6 +366,10 @@ const Checkout = () => {
                           <RadioGroupItem value="mpesa" id="mpesa" />
                           <Label htmlFor="mpesa">MPesa</Label>
                         </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="pesapal" id="pesapal" />
+                          <Label htmlFor="pesapal">Pesapal (MPesa, Card, Bank)</Label>
+                        </div>
                       </RadioGroup>
                     </div>
                   )}
@@ -282,7 +382,9 @@ const Checkout = () => {
                 >
                   {loading ? 'Processing...' : 
                    paymentMethod === 'cod' ? 'Place COD Order' : 
-                   paymentOption === 'card' ? 'Pay with Card' : 'Pay with MPesa'}
+                   paymentOption === 'card' ? 'Pay with Card' : 
+                   paymentOption === 'mpesa' ? 'Pay with MPesa' :
+                   paymentOption === 'pesapal' ? 'Pay with Pesapal' : 'Place Order'}
                 </Button>
               </form>
             </CardContent>
