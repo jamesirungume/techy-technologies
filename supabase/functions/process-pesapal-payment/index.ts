@@ -23,58 +23,77 @@ interface PaymentRequest {
 const getAccessToken = async () => {
   console.log("Requesting OAuth token from Pesapal...");
   
-  const authResponse = await fetch(`${PESAPAL_BASE_URL}/api/Auth/RequestToken`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Accept": "application/json",
-    },
-    body: JSON.stringify({
-      consumer_key: PESAPAL_CONSUMER_KEY,
-      consumer_secret: PESAPAL_CONSUMER_SECRET,
-    }),
-  });
+  try {
+    const authResponse = await fetch(`${PESAPAL_BASE_URL}/api/Auth/RequestToken`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify({
+        consumer_key: PESAPAL_CONSUMER_KEY,
+        consumer_secret: PESAPAL_CONSUMER_SECRET,
+      }),
+    });
 
-  if (!authResponse.ok) {
-    const errorText = await authResponse.text();
-    console.error("Auth request failed:", errorText);
-    throw new Error(`Auth failed: ${authResponse.status} - ${errorText}`);
-  }
+    const responseText = await authResponse.text();
+    console.log("Auth response status:", authResponse.status);
+    console.log("Auth response text:", responseText);
 
-  const authData = await authResponse.json();
-  console.log("Auth response:", authData);
-  
-  if (!authData.token) {
-    throw new Error("No token received from Pesapal");
+    if (!authResponse.ok) {
+      throw new Error(`Auth failed: ${authResponse.status} - ${responseText}`);
+    }
+
+    let authData;
+    try {
+      authData = JSON.parse(responseText);
+    } catch (e) {
+      throw new Error(`Invalid auth response format: ${responseText}`);
+    }
+    
+    if (!authData.token) {
+      throw new Error(`No token in auth response: ${JSON.stringify(authData)}`);
+    }
+    
+    console.log("Token obtained successfully");
+    return authData.token;
+  } catch (error) {
+    console.error("Auth error:", error);
+    throw error;
   }
-  
-  return authData.token;
 };
 
 const registerIPN = async (accessToken: string, callbackUrl: string) => {
-  console.log("Registering IPN URL:", callbackUrl);
+  console.log("Attempting to register IPN URL:", callbackUrl);
   
-  const ipnResponse = await fetch(`${PESAPAL_BASE_URL}/api/URLSetup/RegisterIPN`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Accept": "application/json",
-      "Authorization": `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify({
-      url: callbackUrl,
-      ipn_notification_type: "GET",
-    }),
-  });
+  try {
+    const ipnResponse = await fetch(`${PESAPAL_BASE_URL}/api/URLSetup/RegisterIPN`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        url: callbackUrl,
+        ipn_notification_type: "GET",
+      }),
+    });
 
-  if (ipnResponse.ok) {
-    const ipnData = await ipnResponse.json();
-    console.log("IPN registered successfully:", ipnData);
-    return ipnData.ipn_id;
-  } else {
-    const errorText = await ipnResponse.text();
-    console.warn("IPN registration failed:", errorText);
-    // Continue without IPN for now
+    const responseText = await ipnResponse.text();
+    console.log("IPN response status:", ipnResponse.status);
+    console.log("IPN response text:", responseText);
+
+    if (ipnResponse.ok) {
+      const ipnData = JSON.parse(responseText);
+      console.log("IPN registered successfully");
+      return ipnData.ipn_id;
+    } else {
+      console.warn("IPN registration failed, continuing without IPN");
+      return null;
+    }
+  } catch (error) {
+    console.warn("IPN registration error:", error);
     return null;
   }
 };
@@ -89,15 +108,37 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Processing Pesapal payment request:", { name, phone, email, amount, currency });
 
-    // Step 1: Get OAuth token
-    const accessToken = await getAccessToken();
-    console.log("Pesapal OAuth token obtained successfully");
+    // Step 1: Get OAuth token with retry logic
+    let accessToken;
+    let retries = 3;
+    
+    while (retries > 0) {
+      try {
+        accessToken = await getAccessToken();
+        break;
+      } catch (error) {
+        retries--;
+        console.log(`Auth retry ${3 - retries} failed:`, error);
+        if (retries === 0) throw error;
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retry
+      }
+    }
+
+    console.log("Access token obtained successfully");
 
     // Step 2: Register IPN URL (optional)
     const ipnId = await registerIPN(accessToken, callbackUrl);
 
-    // Step 3: Create payment request with proper formatting
+    // Step 3: Create payment request
     const orderId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Format phone number properly
+    let formattedPhone = phone;
+    if (phone.startsWith('0')) {
+      formattedPhone = `+254${phone.substring(1)}`;
+    } else if (!phone.startsWith('+')) {
+      formattedPhone = `+254${phone}`;
+    }
     
     const paymentData = {
       id: orderId,
@@ -105,13 +146,13 @@ const handler = async (req: Request): Promise<Response> => {
       amount: parseFloat(amount.toString()),
       description: description || "Payment for order",
       callback_url: callbackUrl,
-      notification_id: ipnId,
+      notification_id: ipnId || undefined,
       billing_address: {
         email_address: email,
-        phone_number: phone.startsWith('+') ? phone : `+254${phone.replace(/^0/, '')}`,
+        phone_number: formattedPhone,
         country_code: "KE",
         first_name: name.split(' ')[0] || name,
-        last_name: name.split(' ').slice(1).join(' ') || "",
+        last_name: name.split(' ').slice(1).join(' ') || "User",
         line_1: "N/A",
         line_2: "",
         city: "Nairobi",
@@ -121,7 +162,7 @@ const handler = async (req: Request): Promise<Response> => {
       },
     };
 
-    console.log("Sending payment request to Pesapal:", JSON.stringify(paymentData, null, 2));
+    console.log("Sending payment request:", JSON.stringify(paymentData, null, 2));
 
     const paymentResponse = await fetch(`${PESAPAL_BASE_URL}/api/Transactions/SubmitOrderRequest`, {
       method: "POST",
@@ -134,26 +175,24 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     const responseText = await paymentResponse.text();
-    console.log("Pesapal payment response:", responseText);
+    console.log("Payment response status:", paymentResponse.status);
+    console.log("Payment response text:", responseText);
 
     if (!paymentResponse.ok) {
-      console.error("Payment request failed:", responseText);
-      throw new Error(`Payment request failed: ${paymentResponse.status} - ${responseText}`);
+      throw new Error(`Payment request failed: ${JSON.stringify({ status: paymentResponse.status, body: responseText })}`);
     }
 
     let paymentResult;
     try {
       paymentResult = JSON.parse(responseText);
     } catch (e) {
-      console.error("Failed to parse payment response:", responseText);
-      throw new Error("Invalid response format from Pesapal");
+      throw new Error(`Invalid payment response format: ${responseText}`);
     }
     
-    console.log("Pesapal payment request created successfully:", paymentResult);
+    console.log("Payment request successful:", paymentResult);
 
-    // Validate required fields in response
     if (!paymentResult.order_tracking_id) {
-      throw new Error("No order tracking ID received from Pesapal");
+      throw new Error(`No order tracking ID in response: ${JSON.stringify(paymentResult)}`);
     }
 
     return new Response(JSON.stringify({

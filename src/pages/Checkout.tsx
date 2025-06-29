@@ -15,7 +15,6 @@ import Footer from '@/components/Footer';
 const Checkout = () => {
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('cod');
-  const [paymentOption, setPaymentOption] = useState('card');
   const [shippingInfo, setShippingInfo] = useState({
     fullName: '',
     email: '',
@@ -88,7 +87,7 @@ const Checkout = () => {
         customerInfo: shippingInfo,
         items: items,
         totalAmount: getTotalPrice(),
-        paymentMethod: paymentMethod === 'cod' ? 'Cash on Delivery' : 'Paid Online',
+        paymentMethod: paymentMethod === 'cod' ? 'Cash on Delivery' : 'Paid Online with Pesapal',
         isCOD: isCOD,
         adminEmail: 'jamesmuruguirungu@gmail.com'
       };
@@ -109,6 +108,15 @@ const Checkout = () => {
       const callbackUrl = `${window.location.origin}/order-success`;
       
       console.log("Initiating Pesapal payment...");
+      console.log("Payment data:", {
+        name: shippingInfo.fullName,
+        phone: shippingInfo.phone,
+        email: shippingInfo.email,
+        amount: getTotalPrice(),
+        currency: 'KES',
+        description: `Order for ${items.length} items`,
+        callbackUrl: callbackUrl
+      });
       
       const { data, error } = await supabase.functions.invoke('process-pesapal-payment', {
         body: {
@@ -124,24 +132,30 @@ const Checkout = () => {
 
       if (error) {
         console.error("Supabase function invocation error:", error);
-        throw error;
+        throw new Error(error.message || 'Failed to invoke payment function');
       }
 
       console.log("Pesapal response:", data);
 
-      if (data.success) {
-        // Save order tracking info
+      if (data && data.success) {
+        // Save order as pending first
+        const order = await saveOrder('pending', 'pesapal');
+        
+        // Store order info in localStorage
         localStorage.setItem('pesapal_order_id', data.order_tracking_id);
+        localStorage.setItem('pending_order_id', order.id);
         
         // Use the redirect URL or iframe URL provided by Pesapal
         const paymentUrl = data.iframe_url || data.redirect_url;
         
         if (paymentUrl) {
+          console.log("Opening payment URL:", paymentUrl);
+          
           // Open payment in a new window
           const paymentWindow = window.open(
             paymentUrl,
             'pesapal_payment',
-            'width=800,height=600,scrollbars=yes,resizable=yes'
+            'width=900,height=700,scrollbars=yes,resizable=yes,location=yes'
           );
           
           if (paymentWindow) {
@@ -149,29 +163,40 @@ const Checkout = () => {
             const checkClosed = setInterval(() => {
               if (paymentWindow.closed) {
                 clearInterval(checkClosed);
-                // Check payment status after window closes
-                toast.info('Payment window closed. Checking payment status...');
-                // You might want to verify payment status here
+                console.log('Payment window closed');
+                toast.info('Payment window closed. Redirecting to success page...');
+                // Clear cart and redirect to success
+                clearCart();
                 setTimeout(() => {
-                  navigate('/order-success');
-                }, 2000);
+                  navigate('/order-success', { 
+                    state: { 
+                      orderId: order.id, 
+                      isCOD: false,
+                      paymentMethod: 'Pesapal' 
+                    } 
+                  });
+                }, 1500);
               }
             }, 1000);
             
             toast.success('Pesapal payment window opened. Complete your payment to proceed.');
           } else {
-            // Fallback: redirect current window
+            // Fallback: redirect current window if popup blocked
+            console.log("Popup blocked, redirecting current window");
             window.location.href = paymentUrl;
           }
         } else {
           throw new Error('No payment URL received from Pesapal');
         }
       } else {
-        throw new Error(data.error || 'Failed to initialize Pesapal payment');
+        const errorMessage = data?.error || 'Unknown error occurred';
+        console.error('Pesapal payment failed:', errorMessage);
+        throw new Error(errorMessage);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Pesapal payment error:', error);
-      toast.error(`Failed to initialize Pesapal payment: ${error.message || 'Please try again.'}`);
+      const errorMessage = error.message || 'Please try again';
+      toast.error(`Failed to initialize Pesapal payment: ${errorMessage}`);
     }
   };
 
@@ -181,46 +206,15 @@ const Checkout = () => {
 
     try {
       if (paymentMethod === 'cod') {
-        // Cash on Delivery
+        // Cash on Delivery - save order and send email
         const order = await saveOrder('pending', 'cash_on_delivery');
         await sendOrderEmail(order, true);
         await clearCart();
         toast.success('Order placed successfully! You will be contacted to confirm your COD order.');
         navigate('/order-success', { state: { orderId: order.id, isCOD: true } });
       } else {
-        // Pay Before Delivery
-        if (paymentOption === 'card') {
-          // Stripe Payment
-          const { data, error } = await supabase.functions.invoke('create-payment-session', {
-            body: {
-              items: items,
-              customerInfo: shippingInfo,
-              amount: getTotalPrice() * 100 // Convert to cents
-            }
-          });
-
-          if (error) throw error;
-          
-          // Redirect to Stripe
-          window.location.href = data.url;
-        } else if (paymentOption === 'mpesa') {
-          // MPesa Payment
-          const { data, error } = await supabase.functions.invoke('process-mpesa-payment', {
-            body: {
-              amount: getTotalPrice(),
-              phoneNumber: shippingInfo.phone,
-              items: items,
-              customerInfo: shippingInfo
-            }
-          });
-
-          if (error) throw error;
-
-          toast.success('MPesa payment initiated. Please check your phone and enter your PIN.');
-        } else if (paymentOption === 'pesapal') {
-          // Pesapal Payment
-          await processPesapalPayment();
-        }
+        // Pesapal Payment
+        await processPesapalPayment();
       }
     } catch (error) {
       console.error('Checkout error:', error);
@@ -310,6 +304,7 @@ const Checkout = () => {
                       id="phone"
                       name="phone"
                       type="tel"
+                      placeholder="e.g., 0712345678"
                       value={shippingInfo.phone}
                       onChange={handleInputChange}
                       required
@@ -325,28 +320,30 @@ const Checkout = () => {
                       <Label htmlFor="cod">Cash on Delivery (COD)</Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="online" id="online" />
-                      <Label htmlFor="online">Pay Before Delivery</Label>
+                      <RadioGroupItem value="pesapal" id="pesapal" />
+                      <Label htmlFor="pesapal">Pay Now (M-Pesa, Card, Bank) - Pesapal</Label>
                     </div>
                   </RadioGroup>
 
-                  {paymentMethod === 'online' && (
-                    <div className="ml-6 space-y-3">
-                      <Label className="text-sm font-medium">Choose Payment Option:</Label>
-                      <RadioGroup value={paymentOption} onValueChange={setPaymentOption}>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="card" id="card" />
-                          <Label htmlFor="card">Credit/Debit Card (Stripe)</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="mpesa" id="mpesa" />
-                          <Label htmlFor="mpesa">MPesa</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="pesapal" id="pesapal" />
-                          <Label htmlFor="pesapal">Pesapal (MPesa, Card, Bank)</Label>
-                        </div>
-                      </RadioGroup>
+                  {paymentMethod === 'pesapal' && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <p className="text-blue-800 text-sm">
+                        <strong>Secure Payment with Pesapal</strong>
+                      </p>
+                      <p className="text-blue-700 text-sm mt-1">
+                        Pay securely using M-Pesa, Credit/Debit Card, or Bank transfer through Pesapal's secure payment gateway.
+                      </p>
+                    </div>
+                  )}
+
+                  {paymentMethod === 'cod' && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <p className="text-yellow-800 text-sm">
+                        <strong>Cash on Delivery</strong>
+                      </p>
+                      <p className="text-yellow-700 text-sm mt-1">
+                        Pay cash when your order is delivered. Our team will contact you to confirm your order.
+                      </p>
                     </div>
                   )}
                 </div>
@@ -358,9 +355,7 @@ const Checkout = () => {
                 >
                   {loading ? 'Processing...' : 
                    paymentMethod === 'cod' ? 'Place COD Order' : 
-                   paymentOption === 'card' ? 'Pay with Card' : 
-                   paymentOption === 'mpesa' ? 'Pay with MPesa' :
-                   paymentOption === 'pesapal' ? 'Pay with Pesapal' : 'Place Order'}
+                   'Pay with Pesapal'}
                 </Button>
               </form>
             </CardContent>
