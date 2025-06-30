@@ -96,13 +96,6 @@ const Navbar = () => {
               )}
             </Button>
             
-            <Button
-              variant="ghost"
-              onClick={() => navigate('/admin')}
-            >
-              Seller?
-            </Button>
-            
             {user ? (
               <Button variant="outline" onClick={handleSignOut}>
                 Sign Out
@@ -244,14 +237,6 @@ const Navbar = () => {
               >
                 <Heart className="h-5 w-5 mr-2" />
                 Wishlist {wishlistItemCount > 0 && `(${wishlistItemCount})`}
-              </Button>
-              
-              <Button
-                variant="ghost"
-                className="justify-start"
-                onClick={() => {navigate('/admin'); setIsMenuOpen(false);}}
-              >
-                Seller?
               </Button>
               
               {user ? (

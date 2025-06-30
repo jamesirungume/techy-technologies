@@ -7,8 +7,8 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, fullName: string, rememberMe?: boolean) => Promise<{ error: any }>;
+  signIn: (email: string, password: string, rememberMe?: boolean) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
 
@@ -47,7 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (email: string, password: string, fullName: string, rememberMe: boolean = false) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -58,18 +58,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
       },
     });
+
+    // Handle remember me functionality
+    if (!error && rememberMe) {
+      localStorage.setItem('supabase_remember_me', 'true');
+    }
+
     return { error };
   };
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string, rememberMe: boolean = false) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+
+    // Handle remember me functionality
+    if (!error) {
+      if (rememberMe) {
+        localStorage.setItem('supabase_remember_me', 'true');
+      } else {
+        localStorage.removeItem('supabase_remember_me');
+      }
+    }
+
     return { error };
   };
 
   const signOut = async () => {
+    localStorage.removeItem('supabase_remember_me');
+    // Clear seller access when signing out
+    sessionStorage.removeItem('seller_access');
+    sessionStorage.removeItem('seller_access_time');
     await supabase.auth.signOut();
   };
 

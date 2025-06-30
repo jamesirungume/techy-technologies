@@ -197,6 +197,30 @@ export type Database = {
         }
         Relationships: []
       }
+      seller_otp: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          otp_code: string
+          used: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          otp_code: string
+          used?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          otp_code?: string
+          used?: boolean | null
+        }
+        Relationships: []
+      }
       wishlist: {
         Row: {
           created_at: string
