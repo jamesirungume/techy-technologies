@@ -96,7 +96,7 @@ const Auth = () => {
                   <Checkbox 
                     id="remember-signin" 
                     checked={rememberMe}
-                    onCheckedChange={setRememberMe}
+                    onCheckedChange={(checked) => setRememberMe(checked === true)}
                   />
                   <Label htmlFor="remember-signin">Remember me</Label>
                 </div>
@@ -143,7 +143,7 @@ const Auth = () => {
                   <Checkbox 
                     id="remember-signup" 
                     checked={rememberMe}
-                    onCheckedChange={setRememberMe}
+                    onCheckedChange={(checked) => setRememberMe(checked === true)}
                   />
                   <Label htmlFor="remember-signup">Remember me</Label>
                 </div>
