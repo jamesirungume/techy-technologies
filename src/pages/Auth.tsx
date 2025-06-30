@@ -7,12 +7,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const { user, signUp, signIn } = useAuth();
   const navigate = useNavigate();
@@ -31,7 +33,7 @@ const Auth = () => {
     }
     
     setLoading(true);
-    const { error } = await signUp(email, password, fullName);
+    const { error } = await signUp(email, password, fullName, rememberMe);
     setLoading(false);
 
     if (error) {
@@ -44,7 +46,7 @@ const Auth = () => {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await signIn(email, password);
+    const { error } = await signIn(email, password, rememberMe);
     setLoading(false);
 
     if (error) {
@@ -90,6 +92,14 @@ const Auth = () => {
                     required
                   />
                 </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="remember-signin" 
+                    checked={rememberMe}
+                    onCheckedChange={setRememberMe}
+                  />
+                  <Label htmlFor="remember-signin">Remember me</Label>
+                </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? 'Signing In...' : 'Sign In'}
                 </Button>
@@ -128,6 +138,14 @@ const Auth = () => {
                     required
                     minLength={6}
                   />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="remember-signup" 
+                    checked={rememberMe}
+                    onCheckedChange={setRememberMe}
+                  />
+                  <Label htmlFor="remember-signup">Remember me</Label>
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? 'Creating Account...' : 'Sign Up'}

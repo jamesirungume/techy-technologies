@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,7 +43,7 @@ const Checkout = () => {
   const saveOrder = async (paymentStatus: string, paymentMethod: string) => {
     try {
       const orderData = {
-        user_id: user?.id || null,
+        user_id: user?.id || null, // Allow null for guest users
         total_amount: getTotalPrice(),
         status: paymentStatus,
         payment_method: paymentMethod,
@@ -231,6 +230,18 @@ const Checkout = () => {
       
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8">Checkout</h1>
+        
+        {!user && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-blue-800">
+              <strong>Guest Checkout</strong> - You're checking out as a guest. 
+              <Button variant="link" onClick={() => navigate('/auth')} className="ml-2">
+                Sign In
+              </Button>
+              to save your order history and preferences.
+            </p>
+          </div>
+        )}
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <Card>

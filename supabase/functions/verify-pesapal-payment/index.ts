@@ -6,9 +6,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const PESAPAL_CONSUMER_KEY = Deno.env.get("PESAPAL_CONSUMER_KEY");
-const PESAPAL_CONSUMER_SECRET = Deno.env.get("PESAPAL_CONSUMER_SECRET");
-const PESAPAL_BASE_URL = "https://cybqa.pesapal.com/pesapalv3"; // Sandbox URL
+const PESAPAL_CONSUMER_KEY = "NMjAcA377rp5LBxdJNX1Sd5WDqa8mtWq";
+const PESAPAL_CONSUMER_SECRET = "ZjkW1CTfrYBGiyW/pduJX/T+iPQ=";
+const PESAPAL_BASE_URL = "https://pay.pesapal.com/v3";
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
