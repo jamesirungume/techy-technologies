@@ -1,14 +1,17 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { Info } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
@@ -104,19 +107,16 @@ const Checkout = () => {
   };
 
   const processPesapalPayment = async () => {
+    if (!user) {
+      toast.error('Please sign in to pay with Pesapal');
+      navigate('/auth');
+      return;
+    }
+
     try {
       const callbackUrl = `${window.location.origin}/order-success`;
       
       console.log("Initiating Pesapal payment...");
-      console.log("Payment data:", {
-        name: shippingInfo.fullName,
-        phone: shippingInfo.phone,
-        email: shippingInfo.email,
-        amount: getTotalPrice(),
-        currency: 'KES',
-        description: `Order for ${items.length} items`,
-        callbackUrl: callbackUrl
-      });
       
       const { data, error } = await supabase.functions.invoke('process-pesapal-payment', {
         body: {
@@ -141,17 +141,18 @@ const Checkout = () => {
         // Save order as pending first
         const order = await saveOrder('pending', 'pesapal');
         
+        // Send email for paid order
+        await sendOrderEmail(order, false);
+        
         // Store order info in localStorage
         localStorage.setItem('pesapal_order_id', data.order_tracking_id);
         localStorage.setItem('pending_order_id', order.id);
         
-        // Use the redirect URL or iframe URL provided by Pesapal
         const paymentUrl = data.iframe_url || data.redirect_url;
         
         if (paymentUrl) {
           console.log("Opening payment URL:", paymentUrl);
           
-          // Open payment in a new window
           const paymentWindow = window.open(
             paymentUrl,
             'pesapal_payment',
@@ -159,13 +160,11 @@ const Checkout = () => {
           );
           
           if (paymentWindow) {
-            // Monitor the payment window
             const checkClosed = setInterval(() => {
               if (paymentWindow.closed) {
                 clearInterval(checkClosed);
                 console.log('Payment window closed');
                 toast.info('Payment window closed. Redirecting to success page...');
-                // Clear cart and redirect to success
                 clearCart();
                 setTimeout(() => {
                   navigate('/order-success', { 
@@ -181,7 +180,6 @@ const Checkout = () => {
             
             toast.success('Pesapal payment window opened. Complete your payment to proceed.');
           } else {
-            // Fallback: redirect current window if popup blocked
             console.log("Popup blocked, redirecting current window");
             window.location.href = paymentUrl;
           }
@@ -206,14 +204,14 @@ const Checkout = () => {
 
     try {
       if (paymentMethod === 'cod') {
-        // Cash on Delivery - save order and send email
+        // Cash on Delivery - works for both authenticated and guest users
         const order = await saveOrder('pending', 'cash_on_delivery');
         await sendOrderEmail(order, true);
         await clearCart();
         toast.success('Order placed successfully! You will be contacted to confirm your COD order.');
         navigate('/order-success', { state: { orderId: order.id, isCOD: true } });
       } else {
-        // Pesapal Payment
+        // Pesapal Payment - requires authentication
         await processPesapalPayment();
       }
     } catch (error) {
@@ -337,7 +335,19 @@ const Checkout = () => {
                     </div>
                   </RadioGroup>
 
-                  {paymentMethod === 'pesapal' && (
+                  {paymentMethod === 'pesapal' && !user && (
+                    <Alert>
+                      <Info className="h-4 w-4" />
+                      <AlertDescription>
+                        <strong>Sign In Required:</strong> You need to be signed in to pay with Pesapal. 
+                        <Button variant="link" onClick={() => navigate('/auth')} className="ml-1 p-0 h-auto">
+                          Click here to sign in
+                        </Button>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {paymentMethod === 'pesapal' && user && (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                       <p className="text-blue-800 text-sm">
                         <strong>Secure Payment with Pesapal</strong>
@@ -363,10 +373,11 @@ const Checkout = () => {
                 <Button 
                   type="submit" 
                   className="w-full"
-                  disabled={loading}
+                  disabled={loading || (paymentMethod === 'pesapal' && !user)}
                 >
                   {loading ? 'Processing...' : 
                    paymentMethod === 'cod' ? 'Place COD Order' : 
+                   !user ? 'Sign In Required for Pesapal' :
                    'Pay with Pesapal'}
                 </Button>
               </form>
