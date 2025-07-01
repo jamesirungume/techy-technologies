@@ -72,6 +72,13 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-4">
             <Button
               variant="ghost"
+              onClick={() => navigate('/contact')}
+            >
+              Contact
+            </Button>
+            
+            <Button
+              variant="ghost"
               className="relative"
               onClick={() => navigate('/wishlist')}
             >
@@ -228,6 +235,14 @@ const Navbar = () => {
                 onClick={() => {navigate('/products?category=Accessories'); setIsMenuOpen(false);}}
               >
                 Accessories
+              </Button>
+              
+              <Button
+                variant="ghost"
+                className="justify-start"
+                onClick={() => {navigate('/contact'); setIsMenuOpen(false);}}
+              >
+                Contact
               </Button>
               
               <Button
