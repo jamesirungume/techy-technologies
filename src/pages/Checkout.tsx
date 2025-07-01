@@ -207,7 +207,7 @@ const Checkout = () => {
         // Cash on Delivery - works for both authenticated and guest users
         const order = await saveOrder('pending', 'cash_on_delivery');
         await sendOrderEmail(order, true);
-        await clearCart();
+        clearCart();
         toast.success('Order placed successfully! You will be contacted to confirm your COD order.');
         navigate('/order-success', { state: { orderId: order.id, isCOD: true } });
       } else {
